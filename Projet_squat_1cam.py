@@ -62,12 +62,12 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
     ind_cote = 1 #ajouter l'initialisation en fonction du plus grand y des pointes de pieds
     if ind_cote == 0 : 
         ind_autre_cote = 1
-        cote = 'côté droit'
-        autre_cote = 'côté gauche'
+        cote = 'cote droit'
+        autre_cote = 'cote gauche'
     else : 
         ind_autre_cote = 0
-        cote = 'côté gauche'
-        autre_cote = 'côté droit'
+        cote = 'cote gauche'
+        autre_cote = 'cote droit'
 
     #initialisation
     while (time.time()-start)< 10  : 
@@ -143,6 +143,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             #Angles des segments
             angle_knee = [calculate_angle(hip[0],knee[0], ankle[0]), calculate_angle(hip[1],knee[1], ankle[1])]
+            angle_hip = [calculate_angle(shoulder[0],hip[0],knee[0]), calculate_angle(shoulder[1],hip[1],knee[1])]
             angle_head = [calculate_angle(ear[0],shoulder[0], hip[0]), calculate_angle(ear[1], shoulder[1], hip[1])]
             angle_feet = [calculate_angle(hip[0],heel[0], foot[0]), calculate_angle(hip[1], heel[1], foot[1])]
             
@@ -157,15 +158,27 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             # Visualize angle 
             #angle du regard 
-            cv2.putText(image, str(round(angle_head[1],0)), 
-                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
+            cv2.putText(image, str(angle_hip[1]), 
+                           tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(round(ligne_gaze[1],0)), 
-                           tuple(np.multiply(eye[1], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
+            cv2.putText(image, str(angle_knee[1]), 
+                           tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 2, cv2.LINE_AA
+                                )
+            
+                        #angle du regard 
+            cv2.putText(image, str(angle_hip[0]), 
+                           tuple(np.multiply(hip[0], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (79, 121, 66), 2, cv2.LINE_AA
+                                )
+            
+            #angle de hanche 
+            cv2.putText(image, str(angle_knee[0]), 
+                           tuple(np.multiply(knee[0], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 0, 255), 2, cv2.LINE_AA
                                 )
             
 
@@ -176,20 +189,20 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             
             ##tête 
 
-            if angle_head[ind_cote] < thresh_head : 
-                text_pb = f"NOT GOOD, tête trop avancée : {angle_head[ind_cote]}"
-                #ajouter voix "rentre le menton"
-                
-            # la ligne est entre l'oreille et le centre du segment nez-intérieur de l'oeil
-            elif abs(ligne_gaze[ind_cote]) > 10 : 
-                if dist_nose_should[ind_autre_cote] < 0.7 : 
-                    text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
-                elif dist_nose_should[ind_autre_cote] > 0.95 : 
-                    text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
-                elif ligne_gaze[ind_cote] > 0 : 
-                    text_pb = f"NOT GOOD, tête inclinée vers le {cote} : {ligne_gaze}"
-                elif ligne_gaze[ind_cote] < 0 : text_pb = f"NOT GOOD, tête inclinée vers le {autre_cote} : {ligne_gaze}"
-                #ajouter voix "ta tête est inclinée"
+            # if angle_head[ind_cote] < thresh_head and dist_nose_should[ind_autre_cote] > 0.7 : 
+            #     text_pb = f"NOT GOOD, tête trop avancée : {angle_head[ind_cote]}"
+            #     #ajouter voix "rentre le menton"
+
+            # # la ligne est entre l'oreille et le centre du segment nez-intérieur de l'oeil
+            # elif abs(ligne_gaze[ind_cote]) > 10 : 
+            #     if dist_nose_should[ind_autre_cote] < 0.7 : 
+            #         text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+            #     elif dist_nose_should[ind_autre_cote] > 0.95 : 
+            #         text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
+            #     elif ligne_gaze[ind_cote] > 0 : 
+            #         text_pb = f"NOT GOOD, tête inclinée vers le {cote} : {ligne_gaze}"
+            #     elif ligne_gaze[ind_cote] < 0 : text_pb = f"NOT GOOD, tête inclinée vers le {autre_cote} : {ligne_gaze}"
+            #     #ajouter voix "ta tête est inclinée"
             
             
             # ##épaules
@@ -210,12 +223,34 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             #     text_pb = f"NOT GOOD hanches, {dist_hip}"
             #     # ajouter voix "hanche face aux épaules" + vibration bas du dos
         
-            # ## genoux
+            ## genoux
+            #si le genou est en flexion et que l'écart des genoux est supérieur à la moyenne de l'écart des hanches et des pieds
+            if (angle_knee[ind_cote]<165 or angle_knee[ind_autre_cote]<165) and dist_knee < 1.2*dist_hip : #dist_knee <= (dist_hip+dist_feet)/2 :
+                #si le genou gauche est plus bas que l'autre 
+                if knee[ind_cote][1] > knee[ind_autre_cote][1] : 
+                    text_pb=f"NOT GOOD, genou {cote} vers l'interieur"
+                else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur"
+            
+            #si l'écart des genoux est plus grand que celui des pieds
+            elif (angle_knee[ind_cote]<165 or angle_knee[ind_autre_cote]<165) and dist_knee > 0.9*dist_feet :
+                #si le genou est externe au 1/2 distal du pied
+                if knee[ind_cote][0] > (foot[ind_cote][0] + heel[ind_cote][0])/2 : 
+                    text_pb=f"NOT GOOD, genou {cote} vers l'exterieur"
+                else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur"
+
+            #tronc
+            elif angle_knee[ind_cote]<160 : 
+                if abs(angle_knee[ind_cote] - angle_hip[ind_cote])> 12 or abs(angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote])> 10: 
+                    text_pb=f"NOT GOOD, tronc mal positionne"
+
+            
+
+
             # if abs(ligne_knees) > 10 : 
             #     text_pb = f"NOT GOOD genoux, {ligne_knees}"
             #     # ajouter voix "genoux parallèles au sol " + vibration genoux 
             
-            # if dist_knee > threshold : 
+            # if dist_knee > 13 : 
             #     text_pb = f"NOT GOOD genoux, {dist_knee}"
             #     # ajouter voix "genou face aux hanches" + vibration genoux
             
