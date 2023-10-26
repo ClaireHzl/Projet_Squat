@@ -76,9 +76,9 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 #         # Extract landmarks
 #         try:
 #             landmarks = results.pose_landmarks.landmark
-#             rightfoot = [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y]
-#             leftfoot = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
-#             tabsol.append(angle_of_singleline(rightfoot, leftfoot))
+#             foot[0] = [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y]
+#             foot[1] = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
+#             tabsol.append(angle_of_singleline(foot[0], foot[1]))
 #         except:
 #             pass
 #     anglesol = np.mean(tabsol)
@@ -98,70 +98,61 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         image.flags.writeable = True
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         
-        # Extract landmarks
+        # Extract landmarks [droite, gauche]
         try:
             landmarks = results.pose_landmarks.landmark
 
             #visage 
-            righteye = [landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].y]
-            lefteye = [landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].y]
-            rightear = [landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y]
-            leftear = [landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]
+            eye = [[landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].y]]
+            ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
             nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
-            righteyenose = [(righteye[0]+nose[0])/2, (righteye[1]+nose[1])/2]
-            lefteyenose = [(lefteye[0]+nose[0])/2, (lefteye[1]+nose[1])/2]
+            mideyenose = [[(eye[0][0]+nose[0])/2, (eye[0][1]+nose[1])/2], [(eye[1][0]+nose[0])/2, (eye[1][1]+nose[1])/2]]
 
             #membre sup
-            rightshoulder = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
-            leftshoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+            shoulder = [[landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]]
         
             # membre inf
-            righthip = [landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y]
-            lefthip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]
-            rightknee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y]
-            leftknee = [landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y]
+            hip = [[landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]]
+            knee = [[landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y]]
             
             #pieds
-            rightankle = [landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y]
-            leftankle = [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]
-            rightheel = [landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y]
-            leftheel = [landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y]
-            rightfoot = [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y]
-            leftfoot = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
+            ankle = [[landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]]
+            heel = [[landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y]]
+            foot = [[landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]]
            
-            
+
             ## Calculate angle
 
             #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
-            ligne_gaze=angle_of_singleline(lefteyenose,leftear)
-            #ligne_gaze = angle_of_singleline(righteye, lefteye) plutôt pour cam de face
-            ligne_shoulders = angle_of_singleline(rightshoulder,leftshoulder)
-            ligne_hips= angle_of_singleline(righthip,lefthip)
-            ligne_knees = angle_of_singleline(rightknee, leftknee)
+            ligne_gaze=angle_of_singleline(mideyenose[1],ear[1])
+            #ligne_gaze = angle_of_singleline(righteye, eye[1]) plutôt pour cam de face
+            ligne_shoulders = angle_of_singleline(shoulder[0],shoulder[1])
+            ligne_hips= angle_of_singleline(hip[0],hip[1])
+            ligne_knees = angle_of_singleline(knee[0], knee[1])
 
             #Angles des segments
-            angle_knee = [calculate_angle(righthip,rightknee, rightankle), calculate_angle(lefthip,leftknee, leftankle)]
-            angle_head = [calculate_angle(rightear,rightshoulder, righthip), calculate_angle(leftear, leftshoulder, lefthip)]
-            angle_feet = [calculate_angle(righthip,rightheel, rightfoot), calculate_angle(lefthip, leftheel, leftfoot)]
+            angle_knee = [calculate_angle(hip[0],knee[0], ankle[0]), calculate_angle(hip[1],knee[1], ankle[1])]
+            angle_head = [calculate_angle(ear[0],shoulder[0], hip[0]), calculate_angle(ear[1], shoulder[1], hip[1])]
+            angle_feet = [calculate_angle(hip[0],heel[0], foot[0]), calculate_angle(hip[1], heel[1], foot[1])]
             
             #distances 
-            dist_shoulder = distance(rightshoulder, leftshoulder)
-            dist_hip = distance(righthip, lefthip)
-            dist_knee = distance(rightknee, leftknee)
-            dist_feet=distance(rightfoot, leftfoot)
-            long_feet= [distance(rightheel, rightfoot), distance(leftheel,leftfoot)]
+            dist_shoulder = distance(shoulder[0], shoulder[1])
+            dist_hip = distance(hip[0], hip[1])
+            dist_knee = distance(knee[0], knee[1])
+            dist_feet=distance(foot[0], foot[1])
+            long_feet= [distance(heel[0], foot[0]), distance(heel[1],foot[1])]
 
 
             # Visualize angle 
             #angle du genou 
             cv2.putText(image, str(ligne_gaze), 
-                           tuple(np.multiply(lefteye, [640, 480]).astype(int)), 
+                           tuple(np.multiply(eye[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
             cv2.putText(image, str(ligne_shoulders), 
-                           tuple(np.multiply(leftshoulder, [640, 480]).astype(int)), 
+                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
