@@ -38,13 +38,12 @@ def angle_of_singleline(point1, point2):
 #distance entre 2 points 
 def distance(point1, point2):
     dist = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
-    return dist
-
+    return dist/normal_dist
 
 
 # on utilise une capture d'image par webcam 
 #on utilise le nombre qui correspond à l'ordre où on a branché les cams
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 
 # Curl counter variables
@@ -60,28 +59,40 @@ out = cv2.VideoWriter('your_video.mp4', fourcc, 10.0, size, True)
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
     tabsol = []
     start = time.time()
+    ind_cote = 1 #ajouter l'initialisation en fonction du plus grand y des pointes de pieds
+    if ind_cote == 0 : 
+        ind_autre_cote = 1
+        cote = 'côté droit'
+        autre_cote = 'côté gauche'
+    else : 
+        ind_autre_cote = 0
+        cote = 'côté gauche'
+        autre_cote = 'côté droit'
 
-#     #initialisation
-#     while (time.time()-start)< 10  : 
-#         ret, frame = cap.read()
-#         # Recolor image to RGB
-#         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#         image.flags.writeable = False
-#         # Make detection
-#         results = pose.process(image)
-#         # Recolor back to BGR
-#         image.flags.writeable = True
-#         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    #initialisation
+    while (time.time()-start)< 10  : 
+        ret, frame = cap.read()
+        # Recolor image to RGB
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False
+        # Make detection
+        results = pose.process(image)
+        # Recolor back to BGR
+        image.flags.writeable = True
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         
-#         # Extract landmarks
-#         try:
-#             landmarks = results.pose_landmarks.landmark
-#             foot[0] = [landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y]
-#             foot[1] = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
-#             tabsol.append(angle_of_singleline(foot[0], foot[1]))
-#         except:
-#             pass
-#     anglesol = np.mean(tabsol)
+        # Extract landmarks
+        try:
+            landmarks = results.pose_landmarks.landmark
+            ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
+            shoulder = [[landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]]
+            #foot = [[landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]]
+            #tabsol.append(angle_of_singleline(foot[0], foot[1]))
+            normal_dist = math.sqrt((shoulder[ind_cote][0] - ear[ind_cote][0]) ** 2 + (shoulder[ind_cote][1] - ear[ind_cote][1]) ** 2)
+
+        except:
+            pass
+    #anglesol = np.mean(tabsol)
 
 
     while cap.isOpened():
@@ -103,7 +114,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             landmarks = results.pose_landmarks.landmark
 
             #visage 
-            eye = [[landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].y]]
+            eye = [[landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].y]]
             ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
             nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
             mideyenose = [[(eye[0][0]+nose[0])/2, (eye[0][1]+nose[1])/2], [(eye[1][0]+nose[0])/2, (eye[1][1]+nose[1])/2]]
@@ -124,7 +135,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             ## Calculate angle
 
             #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
-            ligne_gaze=angle_of_singleline(mideyenose[1],ear[1])
+            ligne_gaze=[angle_of_singleline(mideyenose[0],ear[0]), angle_of_singleline(mideyenose[1],ear[1])]
             #ligne_gaze = angle_of_singleline(righteye, eye[1]) plutôt pour cam de face
             ligne_shoulders = angle_of_singleline(shoulder[0],shoulder[1])
             ligne_hips= angle_of_singleline(hip[0],hip[1])
@@ -136,23 +147,24 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             angle_feet = [calculate_angle(hip[0],heel[0], foot[0]), calculate_angle(hip[1], heel[1], foot[1])]
             
             #distances 
+            dist_nose_should = [distance(nose, shoulder[0]), distance(nose, shoulder[1])]
             dist_shoulder = distance(shoulder[0], shoulder[1])
             dist_hip = distance(hip[0], hip[1])
             dist_knee = distance(knee[0], knee[1])
             dist_feet=distance(foot[0], foot[1])
-            long_feet= [distance(heel[0], foot[0]), distance(heel[1],foot[1])]
+            long_foot= [distance(heel[0], foot[0]), distance(heel[1],foot[1])]
 
 
             # Visualize angle 
-            #angle du genou 
-            cv2.putText(image, str(ligne_gaze), 
-                           tuple(np.multiply(eye[1], [640, 480]).astype(int)), 
+            #angle du regard 
+            cv2.putText(image, str(round(angle_head[1],0)), 
+                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(ligne_shoulders), 
-                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
+            cv2.putText(image, str(round(ligne_gaze[1],0)), 
+                           tuple(np.multiply(eye[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
@@ -160,69 +172,77 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             ### Les différents problèmes
 
             text_pb = "good"
+            thresh_head = 145
             
             ##tête 
-            if ligne_gaze > 10 : 
-                text_pb = f"NOT GOOD, tête inclinée : {ligne_gaze}"
-                #ajouter voix "relève la tête"
 
-            #déterminer le threshold
-            threshold = 150
-            if angle_head[1] < threshold : 
-                text_pb = f"NOT GOOD, tête trop avancée : {angle_head[1]}"
+            if angle_head[ind_cote] < thresh_head : 
+                text_pb = f"NOT GOOD, tête trop avancée : {angle_head[ind_cote]}"
                 #ajouter voix "rentre le menton"
+                
+            # la ligne est entre l'oreille et le centre du segment nez-intérieur de l'oeil
+            elif abs(ligne_gaze[ind_cote]) > 10 : 
+                if dist_nose_should[ind_autre_cote] < 0.7 : 
+                    text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+                elif dist_nose_should[ind_autre_cote] > 0.95 : 
+                    text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
+                elif ligne_gaze[ind_cote] > 0 : 
+                    text_pb = f"NOT GOOD, tête inclinée vers le {cote} : {ligne_gaze}"
+                elif ligne_gaze[ind_cote] < 0 : text_pb = f"NOT GOOD, tête inclinée vers le {autre_cote} : {ligne_gaze}"
+                #ajouter voix "ta tête est inclinée"
             
-            ##épaules
-            if abs(ligne_shoulders) > 10 : 
-                text_pb = f"NOT GOOD épaules, {ligne_shoulders}"
-                # ajouter voix "épaules droites" + vibration haut du dos
             
-            if dist_shoulder > threshold : 
-                text_pb = f"NOT GOOD épaules, {dist_shoulder}"
-                # ajouter voix "tiens toi droit" + vibration haut du dos
+            # ##épaules
+            # if abs(ligne_shoulders) > 10 : 
+            #     text_pb = f"NOT GOOD épaules, {ligne_shoulders}"
+            #     # ajouter voix "épaules droites" + vibration haut du dos
+            
+            # if dist_shoulder > threshold : 
+            #     text_pb = f"NOT GOOD épaules, {dist_shoulder}"
+            #     # ajouter voix "tiens toi droit" + vibration haut du dos
 
-            ## hanches
-            if abs(ligne_hips) > 10 : 
-                text_pb = f"NOT GOOD hanches, {ligne_hips}"
-                # ajouter voix "hanches parallèles au sol " + vibration bas du dos
+            # ## hanches
+            # if abs(ligne_hips) > 10 : 
+            #     text_pb = f"NOT GOOD hanches, {ligne_hips}"
+            #     # ajouter voix "hanches parallèles au sol " + vibration bas du dos
             
-            if dist_hip > threshold : 
-                text_pb = f"NOT GOOD hanches, {dist_hip}"
-                # ajouter voix "hanche face aux épaules" + vibration bas du dos
+            # if dist_hip > threshold : 
+            #     text_pb = f"NOT GOOD hanches, {dist_hip}"
+            #     # ajouter voix "hanche face aux épaules" + vibration bas du dos
         
-            ## genoux
-            if abs(ligne_knees) > 10 : 
-                text_pb = f"NOT GOOD genoux, {ligne_knees}"
-                # ajouter voix "genoux parallèles au sol " + vibration genoux 
+            # ## genoux
+            # if abs(ligne_knees) > 10 : 
+            #     text_pb = f"NOT GOOD genoux, {ligne_knees}"
+            #     # ajouter voix "genoux parallèles au sol " + vibration genoux 
             
-            if dist_knee > threshold : 
-                text_pb = f"NOT GOOD genoux, {dist_knee}"
-                # ajouter voix "genou face aux hanches" + vibration genoux
+            # if dist_knee > threshold : 
+            #     text_pb = f"NOT GOOD genoux, {dist_knee}"
+            #     # ajouter voix "genou face aux hanches" + vibration genoux
             
-            ## pieds
-            if angle_feet[1]> threshold : 
-                text_pb = f"NOT GOOD talons, {angle_feet[1]}"
-                # ajouter voix "gardez les talons au sol"
+            # ## pieds
+            # if angle_feet[1]> threshold : 
+            #     text_pb = f"NOT GOOD talons, {angle_feet[1]}"
+            #     # ajouter voix "gardez les talons au sol"
             
-            if abs(long_feet[0] - long_feet[1]) >threshold : 
-                text_pb = f"NOT GOOD pieds non alignés"
-                # ajouter voix "gardez les pieds droits"
+            # if abs(long_foot[0] - long_foot[1]) >threshold : 
+            #     text_pb = f"NOT GOOD pieds non alignés"
+            #     # ajouter voix "gardez les pieds droits"
 
             
-            # #genoux à l'extérieur des chevilles (plutôt pour une cam)
-            # if abs(angle_knee[0]- angle_knee[1]) > 10 : 
-            #     diffknee = angle_knee[0] - angle_knee[1]
-            #     if diffknee > 0 : 
-            #         text_pb = "genou droit à l'intérieur"
-            #         #ajouter vibration au genou droit selon la valeur de diffknee
-            #     else : 
-            #         text_pb = "genou gauche à l'intérieur"
-            #         #ajouter vibration au genou gauche selon la valeur de diffknee
+            # # #genoux à l'extérieur des chevilles (plutôt pour une cam)
+            # # if abs(angle_knee[0]- angle_knee[1]) > 10 : 
+            # #     diffknee = angle_knee[0] - angle_knee[1]
+            # #     if diffknee > 0 : 
+            # #         text_pb = "genou droit à l'intérieur"
+            # #         #ajouter vibration au genou droit selon la valeur de diffknee
+            # #     else : 
+            # #         text_pb = "genou gauche à l'intérieur"
+            # #         #ajouter vibration au genou gauche selon la valeur de diffknee
             
 
 
 
-            # else : text_pb = f"GOOD, {anglesol}"
+            # # else : text_pb = f"GOOD, {anglesol}"
 
 
         except:
