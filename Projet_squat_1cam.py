@@ -40,6 +40,30 @@ def distance(point1, point2):
     dist = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
     return dist/normal_dist
 
+# def ajout_point(list, droit, gauche) : 
+#     if mp_pose.PoseLandmark.droit and mp_pose.PoseLandmark.gauche : 
+#         list.append([[landmarks[mp_pose.PoseLandmark.droit.value].x,landmarks[mp_pose.PoseLandmark.droit.value].y],[landmarks[mp_pose.PoseLandmark.gauche.value].x,landmarks[mp_pose.PoseLandmark.gauche.value].y]])
+#     return list
+
+# def calibration_list(list) : 
+#     print(list)
+#     if list:
+#         list = np.array(list) 
+#         right_x_coords = list[:, 0, 0]
+#         right_y_coords = list[:, 0, 1]
+#         left_x_coords = list[:, 1, 0]
+#         left_y_coords = list[:, 1, 1]
+
+#         mean_left_x = np.mean(left_x_coords)
+#         mean_left_y = np.mean(left_y_coords)
+#         mean_right_x = np.mean(right_x_coords)
+#         mean_right_y = np.mean(right_y_coords)
+#     else:
+#         mean_right_x, mean_right_y, mean_left_x, mean_left_y = 0, 0, 0, 0
+    
+#     return [[mean_right_x, mean_right_y], [mean_left_x, mean_left_y]]
+
+
 
 # on utilise une capture d'image par webcam 
 #on utilise le nombre qui correspond à l'ordre où on a branché les cams
@@ -57,7 +81,8 @@ fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter('your_video.mp4', fourcc, 10.0, size, True)
 
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
-    tabsol = []
+    eye_right, eye_left, ear_right, ear_left, nose_init, shoulder_right, shoulder_left, hip_left, hip_right, knee_right, knee_left, ankle_right, ankle_left, heel_right, heel_left, foot_right, foot_left  = ([] for i in range(17))
+
     start = time.time()
     ind_cote = 1 #ajouter l'initialisation en fonction du plus grand y des pointes de pieds
     if ind_cote == 0 : 
@@ -69,7 +94,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         cote = 'cote gauche'
         autre_cote = 'cote droit'
 
-    #initialisation
+    #initialisation avec calibration
     while (time.time()-start)< 10  : 
         ret, frame = cap.read()
         # Recolor image to RGB
@@ -84,15 +109,65 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         # Extract landmarks
         try:
             landmarks = results.pose_landmarks.landmark
-            ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
-            shoulder = [[landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]]
-            #foot = [[landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]]
-            #tabsol.append(angle_of_singleline(foot[0], foot[1]))
-            normal_dist = math.sqrt((shoulder[ind_cote][0] - ear[ind_cote][0]) ** 2 + (shoulder[ind_cote][1] - ear[ind_cote][1]) ** 2)
 
+            nose_init.append([landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y])
+            
+            # Get coordinates left
+            shoulder_left.append([landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y])
+            hip_left.append([landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y])
+            knee_left.append([landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y])
+            ankle_left.append([landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y])
+            heel_left.append([landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y])
+            foot_left.append([landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y])
+            ear_left.append([landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y])
+            eye_left.append([landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].y])
+            
+            # Get coordinates right
+            shoulder_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y])
+            hip_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y])
+            knee_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y])
+            ankle_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y])
+            heel_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y])
+            foot_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y])
+            ear_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y])
+            eye_right.append([landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].y])
+           
         except:
             pass
-    #anglesol = np.mean(tabsol)
+
+    eye_init = [np.mean(eye_right, axis = 0).tolist(), np.mean(eye_left, axis = 0).tolist()]
+    ear_init = [np.mean(ear_right, axis = 0).tolist(), np.mean(ear_left, axis = 0).tolist()]
+    nose_init = np.mean(nose_init, axis = 0).tolist()
+    shoulder_init = [np.mean(shoulder_right, axis = 0).tolist(), np.mean(shoulder_left, axis = 0).tolist()]
+    hip_init = [np.mean(hip_right, axis = 0).tolist(), np.mean(hip_left, axis = 0).tolist()]
+    knee_init = [np.mean(knee_right, axis = 0).tolist(), np.mean(knee_left, axis = 0).tolist()]
+    ankle_init = [np.mean(ankle_right, axis = 0).tolist(), np.mean(ankle_left, axis = 0).tolist()]
+    heel_init = [np.mean(heel_right, axis = 0).tolist(), np.mean(heel_left, axis = 0).tolist()]
+    foot_init = [np.mean(foot_right, axis = 0).tolist(), np.mean(foot_left, axis = 0).tolist()]
+    
+    mideyenose_init= ([[(eye_init[0][0]+nose_init[0])/2, (eye_init[0][1]+nose_init[1])/2], [(eye_init[1][0]+nose_init[0])/2, (eye_init[1][1]+nose_init[1])/2]])
+    normal_dist = math.sqrt((shoulder_init[ind_cote][0] - ear_init[ind_cote][0]) ** 2 + (shoulder_init[ind_cote][1] - ear_init[ind_cote][1]) ** 2)
+
+    #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
+    ligne_gaze_init=[angle_of_singleline(mideyenose_init[0],ear_init[0]), angle_of_singleline(mideyenose_init[1],ear_init[1])]
+    ligne_shoulders_init = angle_of_singleline(shoulder_init[0],shoulder_init[1])
+    ligne_hips_init= angle_of_singleline(hip_init[0],hip_init[1])
+    ligne_knees_init = angle_of_singleline(knee_init[0], knee_init[1])
+    ligne_feet_init = angle_of_singleline(foot_init[0], foot_init[1])
+
+    #Angles des segments
+    angle_knee_init = [calculate_angle(hip_init[0],knee_init[0], ankle_init[0]), calculate_angle(hip_init[1],knee_init[1], ankle_init[1])]
+    angle_hip_init = [calculate_angle(shoulder_init[0],hip_init[0],knee_init[0]), calculate_angle(shoulder_init[1],hip_init[1],knee_init[1])]
+    angle_head_init = [calculate_angle(ear_init[0],shoulder_init[0], hip_init[0]), calculate_angle(ear_init[1], shoulder_init[1], hip_init[1])]
+    angle_feet_init = [calculate_angle(hip_init[0],heel_init[0], foot_init[0]), calculate_angle(hip_init[1], heel_init[1], foot_init[1])]
+    
+    #distances 
+    dist_nose_should_init = [distance(nose_init, shoulder_init[0]), distance(nose_init, shoulder_init[1])]
+    dist_shoulder_init = distance(shoulder_init[0], shoulder_init[1])
+    dist_hip_init = distance(hip_init[0], hip_init[1])
+    dist_knee_init = distance(knee_init[0], knee_init[1])
+    dist_feet_init=distance(foot_init[0], foot_init[1])
+    long_foot_init= [distance(heel_init[0], foot_init[0]), distance(heel_init[1],foot_init[1])]
 
 
     while cap.isOpened():
@@ -140,6 +215,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             ligne_shoulders = angle_of_singleline(shoulder[0],shoulder[1])
             ligne_hips= angle_of_singleline(hip[0],hip[1])
             ligne_knees = angle_of_singleline(knee[0], knee[1])
+            ligne_feet = angle_of_singleline(foot[0], foot[1])
 
             #Angles des segments
             angle_knee = [calculate_angle(hip[0],knee[0], ankle[0]), calculate_angle(hip[1],knee[1], ankle[1])]
@@ -158,33 +234,33 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             # Visualize angle 
             #angle du regard 
-            cv2.putText(image, str(angle_hip[1]), 
-                           tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (79, 0, 66), 2, cv2.LINE_AA
-                                )
-            
-            #angle de hanche 
             cv2.putText(image, str(angle_knee[1]), 
-                           tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 255, 255), 2, cv2.LINE_AA
-                                )
-            
-                        #angle du regard 
-            cv2.putText(image, str(angle_hip[0]), 
-                           tuple(np.multiply(hip[0], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (79, 121, 66), 2, cv2.LINE_AA
+                           tuple(np.multiply(ear[1], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
             cv2.putText(image, str(angle_knee[0]), 
-                           tuple(np.multiply(knee[0], [640, 480]).astype(int)), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 0, 255), 2, cv2.LINE_AA
+                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
+                           cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
+            
+                        #angle du regard 
+            # cv2.putText(image, str(ligne_hips), 
+            #                tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
+            #                cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
+            #                     )
+            
+            # #angle de hanche 
+            # cv2.putText(image, str(ligne_feet), 
+            #                tuple(np.multiply(heel[1], [640, 480]).astype(int)), 
+            #                cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 255), 2, cv2.LINE_AA
+            #                     )
             
 
             ### Les différents problèmes
 
-            text_pb = "good"
+            text_pb = f"good {ligne_feet_init}"
             thresh_head = 145
             
             ##tête 
@@ -225,23 +301,23 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         
             ## genoux
             #si le genou est en flexion et que l'écart des genoux est supérieur à la moyenne de l'écart des hanches et des pieds
-            if (angle_knee[ind_cote]<165 or angle_knee[ind_autre_cote]<165) and dist_knee < 1.2*dist_hip : #dist_knee <= (dist_hip+dist_feet)/2 :
+            if (angle_knee[ind_cote]<160 or angle_knee[ind_autre_cote]<160) and dist_knee < 1.2*dist_hip_init : #dist_knee <= (dist_hip+dist_feet)/2 :
                 #si le genou gauche est plus bas que l'autre 
                 if knee[ind_cote][1] > knee[ind_autre_cote][1] : 
                     text_pb=f"NOT GOOD, genou {cote} vers l'interieur"
                 else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur"
             
             #si l'écart des genoux est plus grand que celui des pieds
-            elif (angle_knee[ind_cote]<165 or angle_knee[ind_autre_cote]<165) and dist_knee > 0.9*dist_feet :
-                #si le genou est externe au 1/2 distal du pied
-                if knee[ind_cote][0] > (foot[ind_cote][0] + heel[ind_cote][0])/2 : 
+            elif (angle_knee[ind_cote]<160 or angle_knee[ind_autre_cote]<160) and dist_knee > dist_feet :
+                #si le genou est externe au 1/3 distal du pied
+                if knee[ind_cote][0] > (2*foot_init[ind_cote][0] + heel_init[ind_cote][0])/3 : 
                     text_pb=f"NOT GOOD, genou {cote} vers l'exterieur"
                 else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur"
 
-            #tronc
-            elif angle_knee[ind_cote]<160 : 
-                if abs(angle_knee[ind_cote] - angle_hip[ind_cote])> 12 or abs(angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote])> 10: 
-                    text_pb=f"NOT GOOD, tronc mal positionne"
+            # #tronc
+            # elif angle_knee[ind_cote]<160 : 
+            #     if abs(angle_knee[ind_cote] - angle_hip[ind_cote])> 12 or abs(angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote])> 10: 
+            #         text_pb=f"NOT GOOD, tronc mal positionne"
 
             
 
