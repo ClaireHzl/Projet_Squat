@@ -199,7 +199,6 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
             ligne_gaze=[angle_from_footline(mideyenose[0],ear[0]), angle_from_footline(mideyenose[1],ear[1])]
-            #ligne_gaze = angle_from_footline(righteye, eye[1]) plutôt pour cam de face
             ligne_shoulders = angle_from_footline(shoulder[0],shoulder[1])
             ligne_hips= angle_from_footline(hip[0],hip[1])
             ligne_knees = angle_from_footline(knee[0], knee[1])
@@ -213,6 +212,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             
             #distances 
             dist_nose_should = [distance(nose, shoulder[0]), distance(nose, shoulder[1])]
+            dist_ear_should_x = [abs(ear[0][0] - shoulder[0][0])/normal_dist, abs(ear[1][0]- shoulder[1][0])/normal_dist]
             dist_shoulder = distance(shoulder[0], shoulder[1])
             dist_hip = distance(hip[0], hip[1])
             dist_knee = distance(knee[0], knee[1])
@@ -251,8 +251,28 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             text_pb = f"good {ligne_feet_init}"
             thresh_head = 145
+            print("line foot init =", ligne_feet_init)
+
+            if abs(angle_knee[0])< 160 :
+                print(f"angle head d ={angle_head[0]}, g = {angle_head[1]}, angle head init = {angle_head_init}, line gaze = {ligne_gaze}, line gaze_init = {ligne_gaze_init}, dist nose should = {dist_nose_should}, dist nose should init = {dist_nose_should_init}, dist x ear_should={dist_ear_should_x}")
+                #angle hip d ={angle_hip[0]}, g= {angle_hip[1]}, dist_knee ={dist_knee}, rapport avec init ={dist_knee/dist_knee_init}, dist knee heel = {dist_knee_heel}")
             
-            ##tête 
+            ## tête 
+            
+            if abs(ligne_gaze[ind_cote] - ligne_gaze_init[ind_cote]) > 15 : 
+                if dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] < 0.8 : 
+                    text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+                # elif angle_head[ind_cote] - angle_head_init[ind_cote] > 10 : 
+                #     text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
+                elif dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] > 1.25  : 
+                    text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
+
+                elif dist_ear_should_x[ind_cote] < 0.2: 
+                    text_pb = f"NOT GOOD, tête inclinee vers le {cote}"
+                elif dist_ear_should_x[ind_cote] > 0.65: 
+                    text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
+                #if ligne_gaze[ind_cote] < -30 : text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+
 
             # if angle_head[ind_cote] < thresh_head and dist_nose_should[ind_autre_cote] > 0.7 : 
             #     text_pb = f"NOT GOOD, tête trop avancée : {angle_head[ind_cote]}"
@@ -288,37 +308,31 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             #     text_pb = f"NOT GOOD hanches, {dist_hip}"
             #     # ajouter voix "hanche face aux épaules" + vibration bas du dos
 
-             ##tronc
-            if abs(angle_knee[ind_cote])<165 and abs(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])) > 0.9*ligne_feet_init: 
-                if abs(angle_knee[ind_autre_cote]) > abs(angle_hip[ind_autre_cote]) : 
-                    text_pb=f"NOT GOOD, trop penche"
-                else:               
-                    text_pb=f"NOT GOOD, buste trop droit"
+            #  ##tronc
+            # if abs(angle_knee[ind_autre_cote])<165 and abs(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])) > 0.9*ligne_feet_init: 
+            #     if abs(angle_knee[ind_autre_cote]) > abs(angle_hip[ind_autre_cote]) : 
+            #         text_pb=f"NOT GOOD, trop penche"
+            #     else:               
+            #         text_pb=f"NOT GOOD, buste trop droit"
         
-            ## genoux
-            #si le genou est en flexion et que l'écart des genoux est supérieur à la moyenne de l'écart des hanches et des pieds
-            elif (abs(angle_knee[ind_cote])<160 or abs(angle_knee[ind_autre_cote])<160) and (dist_knee < 1.1 * dist_knee_init or knee[ind_autre_cote][1]>knee[ind_cote][1]):
-             #elif (abs(angle_knee[ind_cote])<160 or abs(angle_knee[ind_autre_cote])<160) and dist_knee < 1.1*dist_knee_init : #dist_knee <= (dist_hip+dist_feet)/2 :
-                #en fonction de l'angle de la ligne des genoux : 
-                if ligne_knees < -(ligne_feet_init)/1.75 : 
-                    text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur"
-                elif ligne_knees > -(ligne_feet_init)/3: 
-                    text_pb=f"NOT GOOD, genou {cote} vers l'interieur"
-                # #si le genou gauche est plus bas que l'autre 
-                # if knee[ind_cote][1] > knee[ind_autre_cote][1] : 
-                #     text_pb=f"NOT GOOD, genou {cote} vers l'interieur"
-                # else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur"
+            # ## genoux
+            # #si le genou est en flexion et que l'écart des genoux diminue ou que le genou controlatéral est plus bas 
+            # elif (abs(angle_knee[ind_cote])<160 or abs(angle_knee[ind_autre_cote])<160) and (dist_knee < 1.1 * dist_knee_init or knee[ind_autre_cote][1]>knee[ind_cote][1]):
+            #     #en fonction de l'angle de la ligne des genoux : 
+            #     if ligne_knees < - 15 or knee[ind_autre_cote][1]>knee[ind_cote][1] : 
+            #         text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur"
+            #     elif ligne_knees > -9 :
+            #         text_pb=f"NOT GOOD, genou {cote} vers l'interieur"
+            #     else : text_pb=f"NOT GOOD, genou vers l'intérieur"
             
-            #si l'écart des genoux est trop grand 
-            elif (abs(angle_knee[ind_cote])<160 or abs(angle_knee[ind_autre_cote])<160) and dist_knee > 1.5*dist_knee_init :
-                if ligne_knees < -(ligne_feet_init)/2 : 
-                    text_pb=f"NOT GOOD, genou {cote} vers l'exterieur"
-                elif ligne_knees > -(ligne_feet_init)/3:
-                    text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur"
-                #si le genou est externe au 1/3 distal du pied
-                # if knee[ind_cote][0] > (2*foot_init[ind_cote][0] + heel_init[ind_cote][0])/3 : 
-                #     text_pb=f"NOT GOOD, genou {cote} vers l'exterieur"
-                # else : text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur"
+            # #si l'écart des genoux est trop grand 
+            # elif (abs(angle_knee[ind_cote])<160 or abs(angle_knee[ind_autre_cote])<160) and dist_knee > 1.7*dist_knee_init :
+            #     if ligne_knees < - 12 : 
+            #         text_pb=f"NOT GOOD, genou {cote} vers l'exterieur"
+            #     elif ligne_knees > -10 : 
+            #         text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur"
+            #     else : text_pb=f"NOT GOOD, genou vers l'exterieur"
+
 
 
             # if abs(ligne_knees) > 10 : 
@@ -376,6 +390,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         
         out.write(image)
         cv2.imshow('Squat Correction',image)
+        
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
