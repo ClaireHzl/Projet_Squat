@@ -213,6 +213,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             #distances 
             dist_nose_should = [distance(nose, shoulder[0]), distance(nose, shoulder[1])]
             dist_ear_should_x = [abs(ear[0][0] - shoulder[0][0])/normal_dist, abs(ear[1][0]- shoulder[1][0])/normal_dist]
+            dist_ear_should_y = [abs(ear[0][1] - shoulder[0][1])/normal_dist, abs(ear[1][1]- shoulder[1][1])/normal_dist]
             dist_shoulder = distance(shoulder[0], shoulder[1])
             dist_hip = distance(hip[0], hip[1])
             dist_knee = distance(knee[0], knee[1])
@@ -223,55 +224,55 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             # Visualize angle 
             #angle du regard 
-            cv2.putText(image, str(ligne_feet), 
+            cv2.putText(image, str(dist_shoulder/dist_shoulder_init), 
                            tuple(np.multiply(ear[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(dist_knee_heel), 
-                           tuple(np.multiply(foot[1], [640, 480]).astype(int)), 
+            cv2.putText(image, str(dist_hip/dist_hip_init), 
+                           tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
                         #angle du regard 
-            cv2.putText(image, str(angle_hip[1]), 
+            cv2.putText(image, str(ligne_hips), 
                            tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(ligne_knees), 
-                           tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
+            cv2.putText(image, str(ligne_shoulders), 
+                           tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 255), 2, cv2.LINE_AA
                                 )
             
 
             ### Les différents problèmes
 
-            text_pb = f"good {ligne_feet_init}"
+            text_pb = f"good {dist_shoulder/dist_shoulder_init}"
             thresh_head = 145
             print("line foot init =", ligne_feet_init)
 
-            if abs(angle_knee[0])< 160 :
-                print(f"angle head d ={angle_head[0]}, g = {angle_head[1]}, angle head init = {angle_head_init}, line gaze = {ligne_gaze}, line gaze_init = {ligne_gaze_init}, dist nose should = {dist_nose_should}, dist nose should init = {dist_nose_should_init}, dist x ear_should={dist_ear_should_x}")
+            # if abs(angle_knee[0])< 160 :
+            #     print(f"angle head d ={angle_head[0]}, g = {angle_head[1]}, angle head init = {angle_head_init}, line gaze = {ligne_gaze}, line gaze_init = {ligne_gaze_init}, dist nose should = {dist_nose_should}, dist nose should init = {dist_nose_should_init}, dist x ear_should={dist_ear_should_x}, dist y = {dist_ear_should_y}")
                 #angle hip d ={angle_hip[0]}, g= {angle_hip[1]}, dist_knee ={dist_knee}, rapport avec init ={dist_knee/dist_knee_init}, dist knee heel = {dist_knee_heel}")
             
             ## tête 
             
-            if abs(ligne_gaze[ind_cote] - ligne_gaze_init[ind_cote]) > 15 : 
-                if dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] < 0.8 : 
-                    text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
-                # elif angle_head[ind_cote] - angle_head_init[ind_cote] > 10 : 
-                #     text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
-                elif dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] > 1.25  : 
-                    text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
+            # if abs(ligne_gaze[ind_cote] - ligne_gaze_init[ind_cote]) > 15 : 
+            #     if dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] < 0.8 : 
+            #         text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+            #     # elif angle_head[ind_cote] - angle_head_init[ind_cote] > 10 : 
+            #     #     text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
+            #     elif dist_nose_should[ind_autre_cote]/dist_nose_should_init[ind_autre_cote] > 1.17  : 
+            #         text_pb = f"NOT GOOD, tête  vers le haut : {dist_nose_should[ind_autre_cote]}"
 
-                elif dist_ear_should_x[ind_cote] < 0.2: 
-                    text_pb = f"NOT GOOD, tête inclinee vers le {cote}"
-                elif dist_ear_should_x[ind_cote] > 0.65: 
-                    text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
-                #if ligne_gaze[ind_cote] < -30 : text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
+            #     elif dist_ear_should_x[ind_cote] < 0.2: 
+            #         text_pb = f"NOT GOOD, tête inclinee vers le {cote}"
+            #     elif dist_ear_should_x[ind_cote] > 0.6: 
+            #         text_pb = f"NOT GOOD, tête inclinee vers le {autre_cote}"
+            #     #if ligne_gaze[ind_cote] < -30 : text_pb = f"NOT GOOD, tête vers le bas : {dist_nose_should[ind_autre_cote]}"
 
 
             # if angle_head[ind_cote] < thresh_head and dist_nose_should[ind_autre_cote] > 0.7 : 
@@ -289,24 +290,40 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             #     elif ligne_gaze[ind_cote] < 0 : text_pb = f"NOT GOOD, tête inclinée vers le {autre_cote} : {ligne_gaze}"
             #     #ajouter voix "ta tête est inclinée"
             
-            
-            # ##épaules
-            # if abs(ligne_shoulders) > 10 : 
-            #     text_pb = f"NOT GOOD épaules, {ligne_shoulders}"
-            #     # ajouter voix "épaules droites" + vibration haut du dos
-            
-            # if dist_shoulder > threshold : 
-            #     text_pb = f"NOT GOOD épaules, {dist_shoulder}"
-            #     # ajouter voix "tiens toi droit" + vibration haut du dos
+            if any(abs(i)<165 for i in angle_knee) : 
+                print(f"ligne_should = {ligne_shoulders}, init ={ligne_shoulders_init}, dist should = {dist_shoulder/dist_shoulder_init}\nligne_hip = {ligne_hips}, init ={ligne_hips_init}, dist hip = {dist_hip/dist_hip_init} ")
 
-            # ## hanches
-            # if abs(ligne_hips) > 10 : 
-            #     text_pb = f"NOT GOOD hanches, {ligne_hips}"
-            #     # ajouter voix "hanches parallèles au sol " + vibration bas du dos
+            ## hanches
+            if any(abs(i)<165 for i in angle_knee) and dist_hip > (1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
+                text_pb = f"NOT GOOD hanche {autre_cote} en avant, {dist_hip/dist_hip_init}"
             
-            # if dist_hip > threshold : 
-            #     text_pb = f"NOT GOOD hanches, {dist_hip}"
-            #     # ajouter voix "hanche face aux épaules" + vibration bas du dos
+            elif any(abs(i)<165 for i in angle_knee) and dist_hip < (1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
+                text_pb = f"NOT GOOD hanche {cote} en avant, {dist_hip/dist_hip_init}"
+                # ajouter voix "hanche face aux épaules" + vibration bas du dos
+            
+
+            ##épaules
+            if any(abs(i)<165 for i in angle_knee) and dist_shoulder > (0.92+0.012*ligne_feet_init)*dist_shoulder_init : #1.09*dist_shoulder_init (pour 14): 
+                text_pb = f"NOT GOOD epaule {autre_cote} en avant, {dist_shoulder/dist_shoulder_init}"
+                # ajouter voix "tiens toi droit" + vibration haut du dos
+            elif any(abs(i)<165 for i in angle_knee) and dist_shoulder < (0.94-0.003*ligne_feet_init) * dist_shoulder_init : #< 0.89 avec 18 #0.99 avec 14 d'angle 0.87 avec 25
+                text_pb = f"NOT GOOD epaule {cote} en avant, {dist_shoulder/dist_shoulder_init}"
+
+            elif any(abs(i)<165 for i in angle_knee) and (ligne_shoulders+ligne_feet_init > 3 or  ligne_shoulders+ligne_feet_init < -15) :
+                if ligne_shoulders+ligne_feet_init > 0 : 
+                    text_pb = f"NOT GOOD epaule {cote} trop basse, {ligne_shoulders+ligne_feet_init}"
+                else : text_pb = f"NOT GOOD epaule {autre_cote} trop basse, {ligne_shoulders+ligne_feet_init}"
+                #ajouter voix "épaules droites" + vibration haut du dos
+            
+            elif any(abs(i)<165 for i in angle_knee) and abs(abs(ligne_hips) - abs(ligne_hips_init)) > 6:
+            #elif any(abs(i)<165 for i in angle_knee) and (ligne_hips+ligne_feet_init > 3 or ligne_hips+ligne_feet_init < -12 ): #ou balek de l'angle init et ok de -14 à -25
+                if abs(ligne_hips) - abs(ligne_hips_init) < 0 : 
+                    text_pb = f"NOT GOOD hanche {cote} trop basse, {ligne_hips+ligne_feet_init}"
+                else : text_pb = f"NOT GOOD hanche {autre_cote} trop basse, {ligne_hips+ligne_feet_init}"
+                # ajouter voix "hanches parallèles au sol " + vibration bas du dos
+
+
+            
 
             #  ##tronc
             # if abs(angle_knee[ind_autre_cote])<165 and abs(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])) > 0.9*ligne_feet_init: 
