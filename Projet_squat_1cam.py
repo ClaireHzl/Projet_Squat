@@ -1,11 +1,12 @@
 import cv2
 from cv2 import destroyAllWindows
+from functions import calculate_angle, distance, angle_from_footline, angle_of_singleline
 import mediapipe as mp
 import math
 import numpy as np
 import time
 from collections import Counter
-import playsound
+from playsound import playsound
 import os, sys
 
 
@@ -14,63 +15,21 @@ mp_drawing_styles = mp.solutions.drawing_styles
 mp_pose = mp.solutions.pose
 
 
-## on définit les fonctions de calcul d'angle entre 2 points, avec l'horizontale et de distance : 
-
-#entre 3 points
-def calculate_angle(a,b,c):
-    a = np.array(a) # Point proximal
-    b = np.array(b) # intersection
-    c = np.array(c) # Point distal
-    
-    radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-    angle = np.abs(radians*180.0/np.pi)
-    if angle >180.0:
-        angle -= 360
-    elif angle < -180.0 : 
-        angle += 360
-        
-    return angle
-
-#entre 2 points et l'horizontale 
-def angle_of_singleline(point1, point2):
-    x_diff = point2[0] - point1[0]
-    y_diff = point2[1] - point1[1]
-    return math.degrees(math.atan2(y_diff, x_diff))
-
-# entre 2 points et la ligne des pieds
-def angle_from_footline(point1,point2) : 
-    angle = angle_of_singleline(point1, point2) - ligne_feet_init 
-    if angle >180.0:
-        angle -= 360
-    elif angle < -180.0 : 
-        angle += 360
-    return angle
-
-
-#distance entre 2 points 
-def distance(point1, point2):
-    dist = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
-    return dist/normal_dist
-
-
 ## Partie audio 
-path = "Messages_audio"
-audio_files = os.listdir(path)
-count_time = 0
-tab_pb_int = []
+path = "./Audios"
+audio_files = os.listdir(path) # 27 audios
+audio_files.sort()
+tab_pb_int=[]
 
 
 # on utilise une capture d'image par webcam 
 #on utilise le nombre qui correspond à l'ordre où on a branché les cams
 cap = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 
-#cap = cv2.VideoCapture("video_base.mp4")
-
 # Curl counter variables
-counter = 0 
 text_pb= None
-pb_int = 0 #integer du pb
-no_pb = True #booléen pb/no pb
+squat = False
+squat_ok = None
 
 #on inverse la largeur et la hauteur car on va faire une rotation de l'image
 height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) + 0.5)
@@ -79,12 +38,12 @@ width = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) + 0.5)
 size = (width, height)
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter('your_video.mp4', fourcc, 10.0, size, True)
+playsound(f"{path}/calibration.mp3")
 
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
     eye_right, eye_left, ear_right, ear_left, nose_init, shoulder_right, shoulder_left, hip_left, hip_right, knee_right, knee_left, ankle_right, ankle_left, heel_right, heel_left, foot_right, foot_left  = ([] for i in range(17))
 
     start = time.time()
-    #ajout voix "Place-toi tête haute, le dos droit, les épaules baissées et reste 5 secondes comme ça. "
 
     #initialisation avec calibration
     while (time.time()-start)< 5  : 
@@ -149,35 +108,27 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
     heel_init = [np.median(heel_right, axis = 0).tolist(), np.median(heel_left, axis = 0).tolist()]
     foot_init = [np.median(foot_right, axis = 0).tolist(), np.median(foot_left, axis = 0).tolist()]
     
-    mideyenose_init= ([[(eye_init[0][0]+nose_init[0])/2, (eye_init[0][1]+nose_init[1])/2], [(eye_init[1][0]+nose_init[0])/2, (eye_init[1][1]+nose_init[1])/2]])
     normal_dist = math.sqrt((shoulder_init[ind_cote][0] - heel_init[ind_cote][0]) ** 2 + (shoulder_init[ind_cote][1] - heel_init[ind_cote][1]) ** 2)
 
-    #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
+    #Lignes 
     ligne_feet_init = angle_of_singleline(foot_init[0], foot_init[1])
-    ligne_gaze_init = [angle_from_footline(nose_init, ear_init[0]), angle_from_footline(nose_init, ear_init[1])]
-    #ligne_gaze_init=[angle_from_footline(mideyenose_init[0],ear_init[0]), angle_from_footline(mideyenose_init[1],ear_init[1])]
-    ligne_ear_init = angle_from_footline(ear_init[0],ear_init[1])
-    ligne_shoulders_init = angle_from_footline(shoulder_init[0],shoulder_init[1])
-    ligne_hips_init= angle_from_footline(hip_init[0],hip_init[1])
-    ligne_knees_init = angle_from_footline(knee_init[0], knee_init[1])
+    ligne_gaze_init = [angle_from_footline(nose_init, ear_init[0], ligne_feet_init), angle_from_footline(nose_init, ear_init[1], ligne_feet_init)]
+    ligne_ear_init = angle_from_footline(ear_init[0],ear_init[1], ligne_feet_init)
+    ligne_shoulders_init = angle_from_footline(shoulder_init[0],shoulder_init[1], ligne_feet_init)
+    ligne_hips_init= angle_from_footline(hip_init[0],hip_init[1], ligne_feet_init)
+    ligne_knees_init = angle_from_footline(knee_init[0], knee_init[1], ligne_feet_init)
 
-    #Angles des segments
-    angle_knee_init = [calculate_angle(hip_init[0],knee_init[0], ankle_init[0]), calculate_angle(hip_init[1],knee_init[1], ankle_init[1])]
-    angle_hip_init = [calculate_angle(shoulder_init[0],hip_init[0],knee_init[0]), calculate_angle(shoulder_init[1],hip_init[1],knee_init[1])]
     angle_head_init = [calculate_angle(nose_init, ear_init[0],shoulder_init[0]), calculate_angle(nose_init,ear_init[1], shoulder_init[1])]
-    #angle_head_init = [calculate_angle(ear_init[0],shoulder_init[0], hip_init[0]), calculate_angle(ear_init[1], shoulder_init[1], hip_init[1])]
-    angle_feet_init = [calculate_angle(hip_init[0],heel_init[0], foot_init[0]), calculate_angle(hip_init[1], heel_init[1], foot_init[1])]
-    
-    #distances 
-    dist_nose_should_init = [distance(nose_init, shoulder_init[0]), distance(nose_init, shoulder_init[1])]
-    dist_ear_should_x_init = [abs(ear_init[0][0] - shoulder_init[0][0])/normal_dist, abs(ear_init[1][0]- shoulder_init[1][0])/normal_dist]
-    dist_shoulder_init = distance(shoulder_init[0], shoulder_init[1])
-    dist_hip_init = distance(hip_init[0], hip_init[1])
-    dist_knee_init = distance(knee_init[0], knee_init[1])
-    dist_feet_init=distance(foot_init[0], foot_init[1])
-    long_foot_init= [distance(heel_init[0], foot_init[0]), distance(heel_init[1],foot_init[1])]
 
-    #ajout voix : "tu peux commencer"
+    #distances 
+    dist_ear_should_x_init = [abs(ear_init[0][0] - shoulder_init[0][0])/normal_dist, abs(ear_init[1][0]- shoulder_init[1][0])/normal_dist]
+    dist_shoulder_init = distance(shoulder_init[0], shoulder_init[1], normal_dist)
+    dist_hip_init = distance(hip_init[0], hip_init[1], normal_dist)
+    dist_knee_init = distance(knee_init[0], knee_init[1], normal_dist)
+    dist_feet_init=distance(foot_init[0], foot_init[1], normal_dist)
+
+    playsound(f"{path}/start.mp3")
+
     
     while cap.isOpened():
         ret, frame = cap.read()        
@@ -196,14 +147,12 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         
         # Extract landmarks [droite, gauche]
         try:
-            count_time += 1
             landmarks = results.pose_landmarks.landmark
 
             #visage 
             eye = [[landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].y]]
             ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
             nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
-            mideyenose = [[(eye[0][0]+nose[0])/2, (eye[0][1]+nose[1])/2], [(eye[1][0]+nose[0])/2, (eye[1][1]+nose[1])/2]]
 
             #membre sup
             shoulder = [[landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]]
@@ -216,60 +165,50 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
             ankle = [[landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]]
             heel = [[landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y]]
             foot = [[landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]]
-           
-
-            ## Calculate angle
 
             #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
-            ligne_gaze = [angle_from_footline(nose, ear[0]), angle_from_footline(nose, ear[1])]
-            #ligne_gaze=[angle_from_footline(mideyenose[0],ear[0]), angle_from_footline(mideyenose[1],ear[1])]
-            ligne_shoulders = angle_from_footline(shoulder[0],shoulder[1])
-            ligne_hips= angle_from_footline(hip[0],hip[1])
-            ligne_knees = angle_from_footline(knee[0], knee[1])
-            ligne_feet = angle_from_footline(foot[0], foot[1])
-            ligne_ear = angle_from_footline(ear[0],ear[1])
+            ligne_gaze = [angle_from_footline(nose, ear[0], ligne_feet_init), angle_from_footline(nose, ear[1], ligne_feet_init)]
+            ligne_shoulders = angle_from_footline(shoulder[0],shoulder[1], ligne_feet_init)
+            ligne_hips= angle_from_footline(hip[0],hip[1], ligne_feet_init)
+            ligne_knees = angle_from_footline(knee[0], knee[1], ligne_feet_init)
+            ligne_feet = angle_from_footline(foot[0], foot[1], ligne_feet_init)
+            ligne_ear = angle_from_footline(ear[0],ear[1], ligne_feet_init)
 
             #Angles des segments
             angle_knee = [calculate_angle(hip[0],knee[0], ankle[0]), calculate_angle(hip[1],knee[1], ankle[1])]
             angle_hip = [calculate_angle(shoulder[0],hip[0],knee[0]), calculate_angle(shoulder[1],hip[1],knee[1])]
             angle_head = [calculate_angle(nose,ear[0],shoulder[0]), calculate_angle(nose, ear[1], shoulder[1])]
-            #angle_head = [calculate_angle(ear[0],shoulder[0], hip[0]), calculate_angle(ear[1], shoulder[1], hip[1])]
-            angle_feet = [calculate_angle(hip[0],heel[0], foot[0]), calculate_angle(hip[1], heel[1], foot[1])]
             
             #distances 
-            dist_nose_should = [distance(nose, shoulder[0]), distance(nose, shoulder[1])]
             dist_ear_should_x = [abs(ear[0][0] - shoulder[0][0])/normal_dist, abs(ear[1][0]- shoulder[1][0])/normal_dist]
-            dist_ear_should_y = [abs(ear[0][1] - shoulder[0][1])/normal_dist, abs(ear[1][1]- shoulder[1][1])/normal_dist]
-            dist_shoulder = distance(shoulder[0], shoulder[1])
-            dist_hip = distance(hip[0], hip[1])
-            dist_knee = distance(knee[0], knee[1])
-            dist_heel = distance(heel[0], heel[1])
-            dist_feet=distance(foot[0], foot[1])
-            dist_knee_heel= distance(knee[ind_cote], heel[ind_autre_cote])
-            long_foot= [distance(heel[0], foot[0]), distance(heel[1],foot[1])]
+            dist_shoulder = distance(shoulder[0], shoulder[1], normal_dist)
+            dist_hip = distance(hip[0], hip[1], normal_dist)
+            dist_knee = distance(knee[0], knee[1], normal_dist)
+            dist_heel = distance(heel[0], heel[1], normal_dist)
+            dist_feet=distance(foot[0], foot[1], normal_dist)
 
 
             # Visualize angle 
             #angle du regard 
-            cv2.putText(image, str(round(ligne_ear - ligne_ear_init,4)), 
+            cv2.putText(image, str(round(dist_knee/dist_knee_init,4)), 
                            tuple(np.multiply(ear[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(ligne_knees_init - ligne_knees), 
+            cv2.putText(image, str(dist_hip / dist_hip_init), 
                            tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
             #angle du regard 
-            cv2.putText(image, str([round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],3)] ), 
+            cv2.putText(image, str(round(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]),4) ), 
                            tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
             
             #angle de hanche 
-            cv2.putText(image, str(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])), 
+            cv2.putText(image, str(dist_knee/dist_knee_init), 
                            tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 255), 2, cv2.LINE_AA
                                 )
@@ -277,190 +216,157 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             ### Les différents problèmes
 
-            text_pb = f"good {round(dist_hip_init- dist_hip,4), round(ligne_hips_init - ligne_hips, 4)}"
-            thresh_head = 145
+            text_pb = f"good {dist_knee/dist_knee_init}"
 
-            ## pieds
-            if dist_feet < dist_heel :
-                text_pb = f"NOT GOOD, pied rentres {dist_feet - dist_heel}"
-                # ajouter voix "écarte des pointes de pieds"
-                pb_int = 1
+            if any(abs(i)<160 for i in angle_knee) : 
+                squat = True
 
-            if heel_init[ind_cote][1] - heel[ind_cote][1] > 0.01 or heel_init[ind_autre_cote][1] - heel[ind_autre_cote][1] > 0.015:
-                if heel_init[ind_cote][1] - heel[ind_cote][1] > 0.01 : #0.015
-                    text_pb = f"NOT GOOD talons, {heel_init[ind_cote][1] - heel[ind_cote][1]}"
-                    # ajouter voix "pose ton talon {cote} au sol"
-                    pb_int = 2
-                elif heel_init[ind_autre_cote][1] - heel[ind_autre_cote][1] > 0.01 : #0.015 
-                    text_pb = f"NOT GOOD talons, {heel_init[ind_autre_cote][1] - heel[ind_autre_cote][1]}"
-                    # ajouter voix "pose ton talon {autre_cote} au sol" 
-                    pb_int = 3
+                ## pieds
+                if dist_feet < dist_heel :
+                    text_pb = f"NOT GOOD, pied rentres {dist_feet - dist_heel}"
+                    tab_pb_int.append(1)
 
-                    #### AJOUTER SON POUR LES DEUX TALONS 
+                elif any(heel_init[i][1] - heel[i][1] > 0.01 for i in range(2)):
+                        text_pb = f"NOT GOOD talons, {heel_init[ind_cote][1] - heel[ind_cote][1]}"
+                        tab_pb_int.append(2)
 
-            
- 
-            # tête 
-
-            if abs(ligne_ear - ligne_ear_init) > 10 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.035 for i in range (2)): 
-                if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.035 : 
-                    text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
-                    #ajouter voix "redresse ta tete vers le {autre_cote}"
-                    pb_int = 4
-                elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.035 : 
-                    text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
-                    #ajouter voix "redresse ta tete vers le {cote}"
-                    pb_int = 5
-                #vibration haut du dos / intensité légère
-            else : 
-                if (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
-                    text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
-                    #ajouter voix "fais le double menton"
+                # tête 
+                elif abs(ligne_ear - ligne_ear_init) > 7 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.04 for i in range (2)): 
+                    if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.04 : 
+                        text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
+                        tab_pb_int.append(4)
+                    elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.04 : 
+                        text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
+                        tab_pb_int.append(5)
+                    else : text_pb = "NOT GOOD, tete inclinee"
                     #vibration haut du dos / intensité légère
-                    pb_int = 6
-            
+
+                #elif abs(ligne_ear - ligne_ear_init) <= 7 or any(dist_ear_should_x_init[i]- dist_ear_should_x[i] < 0.04 for i in range (2)) :
+                elif (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
+                        text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
+                        #vibration haut du dos / intensité légère
+                        tab_pb_int.append(6)
+                
                 elif abs(ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]) > 7 : #8
-                    if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
-                        text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                        #ajouter voix "baisse ta tête" / "mets ta tête droite"
-                        pb_int = 7
+                        if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
+                            text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                            tab_pb_int.append(7)
+                        else : 
+                            text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                            tab_pb_int.append(8)
+                        #vibration haut du dos / intensité légère
+                                           
+                ##épaules      
+                elif abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) > 6.5 and  0.9 < dist_shoulder / dist_shoulder_init < 1.05 : #-0.005 < dist_shoulder_init - dist_shoulder < 0.05 : 
+                #elif ligne_shoulders > -12 or ligne_shoulders < -27 : #(ligne_shoulders+ligne_feet_init > 3 or  ligne_shoulders+ligne_feet_init < -15) :
+                    if ligne_shoulders - ligne_shoulders_init > 0 : 
+                        text_pb = f"NOT GOOD epaule {autre_cote} trop haute, {ligne_shoulders}"
+                        #vibration haut du dos / intensité moyenne
+                        tab_pb_int.append(9)
                     else : 
-                        text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                        #ajouter voix "relève la tête"/ "mets ta tête droite"
-                        pb_int = 8
-                    #vibration haut du dos / intensité légère
-            
-  
-
-            # ##épaules
+                        text_pb = f"NOT GOOD epaule {cote} trop haute, {ligne_shoulders}"
+                        #vibration haut du dos / intensité moyenne
+                        tab_pb_int.append(10)
                         
-            # if any(abs(i)<160 for i in angle_knee) and abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) > 6.5 and -0.35 < dist_shoulder_init - dist_shoulder < 0.05 : 
-            # #elif any(abs(i)<160 for i in angle_knee) and ligne_shoulders > -12 or ligne_shoulders < -27 : #(ligne_shoulders+ligne_feet_init > 3 or  ligne_shoulders+ligne_feet_init < -15) :
-            #     if ligne_shoulders - ligne_shoulders_init > 0 : 
-            #         text_pb = f"NOT GOOD epaule {cote} trop basse, {ligne_shoulders}"
-            #         # ajouter voix "remonte ton épaule {cote}" 
-            #         #vibration haut du dos / intensité moyenne
-            #         pb_int = 9
-            #     else : 
-            #         text_pb = f"NOT GOOD epaule {autre_cote} trop basse, {ligne_shoulders}"
-            #         # ajouter voix "remonte ton épaule {autre_cote}" 
-            #         #vibration haut du dos / intensité moyenne
-            #         pb_int = 10
+                elif dist_shoulder / dist_shoulder_init > 1.05 : #dist_shoulder_init - dist_shoulder < -0.005 #dist_shoulder/dist_shoulder_init > 1.08 :  #(0.92+0.012*ligne_feet_init)*dist_shoulder_init : #1.09*dist_shoulder_init (pour 14): 
+                    text_pb = f"NOT GOOD epaule {autre_cote} en avant, {dist_shoulder / dist_shoulder_init}"
+                    #vibration haut du dos / intensité moyenne
+                    tab_pb_int.append(11)
+                elif dist_shoulder / dist_shoulder_init  < 0.9 : #dist_shoulder_init - dist_shoulder > 0.07 : #dist_shoulder/dist_shoulder_init <0.7 : #(0.94-0.003*ligne_feet_init) * dist_shoulder_init : #< 0.89 avec 18 #0.99 avec 14 d'angle 0.87 avec 25
+                    text_pb = f"NOT GOOD epaule {cote} en avant, {dist_shoulder / dist_shoulder_init}"
+                    #vibration haut du dos / intensité moyenne
+                    tab_pb_int.append(12)
+
+                                ## hanches
+                elif dist_hip/dist_hip_init > 1.02 : #dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
+                    text_pb = f"NOT GOOD hanche {autre_cote} en avant, {dist_hip_init- dist_hip}"
+                    #vibration bas du dos / intensité moyenne   
+                    tab_pb_int.append(13)     
+                elif dist_hip/dist_hip_init < 0.9 : #dist_hip_init- dist_hip > 0.02 : #dist_hip/dist_hip_init < 0.88 : #(1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
+                    text_pb = f"NOT GOOD hanche {cote} en avant, {dist_hip_init- dist_hip}"
+                    #vibration bas du dos / intensité moyenne
+                    tab_pb_int.append(14)
+                
+                elif ligne_hips_init - ligne_hips < -2.5 :#abs(abs(ligne_hips) - abs(ligne_hips_init)) > 8.5:
+                    text_pb = f"NOT GOOD hanche {cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
+                    #vibration bas du dos / intensité moyenne
+                    tab_pb_int.append(15)
+
+                elif ligne_hips_init - ligne_hips > 3  : 
+                    text_pb = f"NOT GOOD hanche {autre_cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
+                    #vibration bas du dos / intensité moyenne
+                    tab_pb_int.append(16)
+
+                
+
+                 ##tronc
+                elif abs(angle_knee[ind_autre_cote])<160 and (abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) < 5 or  abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30): 
+                    if abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30: 
+                        text_pb=f"NOT GOOD, trop penche {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
+                        tab_pb_int.append(17)
+                    else:               
+                        text_pb=f"NOT GOOD, buste trop droit {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
+                        tab_pb_int.append(18)
+                    #vibration bas du dos / intensité moyenne
+                        
+                else : 
+                    tab_pb_int.append(0)
+                
+                ## genoux
                     
-            # elif any(abs(i)<160 for i in angle_knee) and dist_shoulder_init - dist_shoulder < -0.035 : #dist_shoulder/dist_shoulder_init > 1.08 :  #(0.92+0.012*ligne_feet_init)*dist_shoulder_init : #1.09*dist_shoulder_init (pour 14): 
-            #     text_pb = f"NOT GOOD epaule {autre_cote} en avant, {dist_shoulder_init - dist_shoulder}"
-            #     # ajouter voix "recule ton épaule {autre_cote}" 
-            #     #vibration haut du dos / intensité moyenne
-            #     pb_int = 11
-            # elif any(abs(i)<160 for i in angle_knee) and dist_shoulder_init - dist_shoulder > 0.07 : #dist_shoulder/dist_shoulder_init <0.7 : #(0.94-0.003*ligne_feet_init) * dist_shoulder_init : #< 0.89 avec 18 #0.99 avec 14 d'angle 0.87 avec 25
-            #     text_pb = f"NOT GOOD epaule {cote} en avant, {dist_shoulder_init - dist_shoulder}"
-            #     # ajouter voix "recule ton épaule {cote}" 
-            #     #vibration haut du dos / intensité moyenne
-            #     pb_int = 12
-            
 
+                 #si l'écart des genoux est trop grand 
+                if dist_knee/dist_knee_init >= 1.6 : 
+                    if knee[ind_cote][0] > ankle[ind_cote][0] :
+                        text_pb=f"NOT GOOD, genou {cote} vers l'exterieur {round(ligne_knees,2)}"
+                        tab_pb_int.append(22)
+                        #vibration genou {cote} 
 
-            # ## hanches
-            # if any(abs(i)<160 for i in angle_knee) and dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
-            #     text_pb = f"NOT GOOD hanche {autre_cote} en avant, {dist_hip_init- dist_hip}"
-            #     #ajouter voix "hanche face aux épaules"
-            #     #vibration bas du dos / intensité moyenne   
-            #     pb_int = 13     
-            # elif any(abs(i)<160 for i in angle_knee) and dist_hip_init- dist_hip > 0.02 : #dist_hip/dist_hip_init < 0.88 : #(1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
-            #     text_pb = f"NOT GOOD hanche {cote} en avant, {dist_hip_init- dist_hip}"
-            #     #ajouter voix "hanche face aux épaules"
-            #     #vibration bas du dos / intensité moyenne
-            #     pb_int = 14
-            
-            # elif any(abs(i)<160 for i in angle_knee) and ligne_hips_init - ligne_hips < -2.5 :#abs(abs(ligne_hips) - abs(ligne_hips_init)) > 8.5:
-            #     text_pb = f"NOT GOOD hanche {cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
-            #     # ajouter voix "remonte ta hanche {cote}" 
-            #     #vibration bas du dos / intensité moyenne
-            #     pb_int = 15
+                    else : 
+                        text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur {round(ligne_knees,2)}"
+                        #vibration genou {autre_cote} 
+                        tab_pb_int.append(23)
 
-            # elif any(abs(i)<160 for i in angle_knee) and ligne_hips_init - ligne_hips > 5  : 
-            #     text_pb = f"NOT GOOD hanche {autre_cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
-            #     # ajouter voix "remonte ta hanche {autre_cote}" 
-            #     #vibration bas du dos / intensité moyenne
-            #     pb_int = 16
+                #si le genou controlatéral dépasse la pointe de pied  
+                elif knee[ind_autre_cote][0] < foot[ind_autre_cote][0] :
+                    text_pb=f"NOT GOOD, genou en avant {round(knee[ind_autre_cote][0] - foot[ind_autre_cote][0],2)}"
+                    #vibration bas du dos / intensité moyenne
+                    tab_pb_int.append(19)
 
-            
-
-            #  ##tronc
-            # if abs(angle_knee[ind_autre_cote])<160 and (abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) < 5 or  abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30): 
-            #     if abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30: 
-            #         text_pb=f"NOT GOOD, trop penche {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
-            #         #ajouter voix "redresse ton buste en serrant les omoplates"
-            #         pb_int = 17
-            #     else:               
-            #         text_pb=f"NOT GOOD, buste trop droit {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
-            #         #ajouter voix "recule ton bassin"
-            #         pb_int = 18
-            #     #vibration bas du dos / intensité moyenne
-            
-
-            # ## genoux
+                #si le genou est en flexion et que l'écart des genoux diminue ou que le genou controlatéral est plus bas 
+                elif dist_knee/dist_knee_init < 1.1 or (any(abs(i)<150 for i in angle_knee) and (dist_knee/dist_knee_init < 1.3  or  knee[ind_autre_cote][1]>knee[ind_cote][1])):
+                    #en fonction de l'angle de la ligne des genoux : 
+                    if ligne_knees < - 5 or knee[ind_autre_cote][1]>knee[ind_cote][1] : #-12
+                        text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur {round(ligne_knees_init - ligne_knees,2)}"
+                        #vibration genou {autre_cote} 
+                        tab_pb_int.append(20)
+                    elif ligne_knees > -3 : 
+                        text_pb=f"NOT GOOD, genou {cote} vers l'interieur {round(ligne_knees,2)}"
+                        #vibration genou {cote} 
+                        tab_pb_int.append(21)
+                    else : text_pb=f"NOT GOOD, genou vers l'intérieur {round(ligne_knees,2)}"
                 
-            # #si le genou controlatéral dépasse la pointe de pied  
-            # if any(abs(i)<160 for i in angle_knee) and knee[ind_autre_cote][0] < foot[ind_autre_cote][0] :
-            #     text_pb=f"NOT GOOD, genou en avant {round(knee[ind_autre_cote][0] - foot[ind_autre_cote][0],2)}"
-            #     #ajouter voix "Tes genoux sont trop vers l’avant, recule ton bassin (comme pour t’asseoir sur une chaise) "
-            #     #vibration bas du dos / intensité moyenne
-            #     pb_int = 19
 
-            # #si le genou est en flexion et que l'écart des genoux diminue ou que le genou controlatéral est plus bas 
-            # if any(abs(i)<145 for i in angle_knee) and (dist_knee/dist_feet_init < 0.75  or  knee[ind_autre_cote][1]>knee[ind_cote][1]):
-            # #if any(abs(i)<145 for i in angle_knee) and (dist_knee/dist_knee_init < 1.4  or  knee[ind_autre_cote][1]>knee[ind_cote][1]):
-            #     #en fonction de l'angle de la ligne des genoux : 
-            #     if ligne_knees < - 11 or knee[ind_autre_cote][1]>knee[ind_cote][1] : #-12
-            #     #if ligne_knees_init - ligne_knees > - 2 or knee[ind_autre_cote][1]>knee[ind_cote][1] : #-12
-            #         text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur {round(ligne_knees_init - ligne_knees,2)}"
-            #         #ajouter voix "écarte ton genou {autre_cote} vers l'extérieur"
-            #         #vibration genou {autre_cote} 
-            #         pb_int = 20
-            #     #elif ligne_knees_init - ligne_knees < -6 :
-            #     elif ligne_knees > -10 : 
-            #         text_pb=f"NOT GOOD, genou {cote} vers l'interieur {round(ligne_knees,2)}"
-            #         #ajouter voix "écarte ton genou {cote} vers l'extérieur"
-            #         #vibration genou {cote} 
-            #         pb_int = 21
-            #     else : text_pb=f"NOT GOOD, genou vers l'intérieur {round(ligne_knees,2)}"
-            
-            # #si l'écart des genoux est trop grand 
-            # elif any(abs(i)<145 for i in angle_knee) and dist_knee/dist_feet_init > 1 : 
-            # #elif any(abs(i)<160 for i in angle_knee) and dist_knee/dist_knee_init > 1.8 : #1.5
-            #     #if ligne_knees_init - ligne_knees > - 5 :
-            #     if ligne_knees < - 5 : 
-            #         text_pb=f"NOT GOOD, genou {cote} vers l'exterieur {round(ligne_knees,2)}"
-            #         #ajouter voix "rentre ton genou {cote} vers l'intérieur"
-            #         #vibration genou {cote} 
-            #         pb_int = 22
-            #     #elif ligne_knees_init - ligne_knees < - 6 :
-            #     elif ligne_knees > -4 : 
-            #         text_pb=f"NOT GOOD, genou {autre_cote} vers l'exterieur {round(ligne_knees,2)}"
-            #         #ajouter voix "rentre ton genou {autre_cote} vers l'intérieur"
-            #         #vibration genou {autre_cote} 
-            #         pb_int = 23
-            #     else : text_pb=f"NOT GOOD, genou vers l'exterieur { round(ligne_knees/ligne_knees_init,2)}"
 
-            """ Ajout de l'audio """
-            
-            # Toutes les .. sec
-            if count_time % 2 == 0 :
-                tab_pb_int.append(pb_int)
-            
-            # Toutes les 2 secondes à peu près
-            if count_time % 50 == 0 : 
-                print('tab', tab_pb_int)
-                counter_pb = Counter(tab_pb_int)
-                # Reinitialisation de la tab_pd_int
-                tab_pb_int = []
-                most_pb = counter_pb.most_common(1)[0][0]
-                print('major pb : ', most_pb)
+            else : 
+                if squat == True : 
+                    print('tab', tab_pb_int)
+                    counter_pb = Counter(tab_pb_int)
+                    tab_pb_int=[]
+                    if counter_pb.most_common(1)[0][1] > 5 :
+                        most_pb = counter_pb.most_common(1)[0][0]
+                        squat_ok = False
+                    else : most_pb = 0
+                    print('major pb : ', most_pb)
+                    
+                    # Audio du problème prioritaire
+                    if squat_ok == False or squat_ok == None: 
+                        playsound(f"{path}/{audio_files[most_pb]}")
+                    
+                    if most_pb == 0 : squat_ok = True
 
-                # Audio du problème prioritaire
-                #playsound.playsound(f"{path}/{audio_files[most_pb]}")
-                
+                squat = False     
+                text_pb=f"{most_pb}"   
 
 
         except:
