@@ -7,6 +7,7 @@ import numpy as np
 import time
 from collections import Counter
 from playsound import playsound
+import pyaudio
 import os, sys
 
 
@@ -216,7 +217,8 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             ### Les différents problèmes
 
-            text_pb = f"good {dist_knee/dist_knee_init}"
+            text_pb = f"good {foot[0]}"
+            print(foot)
 
             if any(abs(i)<160 for i in angle_knee) : 
                 squat = True
@@ -395,7 +397,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
         
 
-        if cv2.waitKey(10) & 0xFF == ord('q'):
+        if cv2.waitKey(10) & 0xFF == ord('q') or foot[0][1] > 1 or foot[1][1] > 1:
             break
 
     cap.release()

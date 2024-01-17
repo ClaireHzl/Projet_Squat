@@ -38,3 +38,26 @@ def angle_from_footline(point1,point2, ligne_feet_init) :
 def distance(point1, point2, normal_dist):
     dist = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
     return dist/normal_dist
+
+import pyaudio
+from speech_recognition import Recognizer, Microphone, AudioFile
+
+
+# recognizer = Recognizer()
+# with Microphone() as source:
+#     print("Réglage du bruit ambiant... Patientez...")
+#     recognizer.adjust_for_ambient_noise(source)
+#     print("Vous pouvez parler...")
+#     recorded_audio = recognizer.listen(source)
+#     print("Enregistrement terminé !")
+    
+# # Reconnaissance de l'audio
+# try:
+#     print("Reconnaissance du texte...")
+#     text = recognizer.recognize_google(
+#             recorded_audio, 
+#             language="fr-FR"
+#         )
+#     print("Vous avez dit : {}".format(text))
+# except Exception as ex:
+#     print(ex)
