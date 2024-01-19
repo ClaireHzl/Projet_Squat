@@ -192,81 +192,48 @@ def distance(point1, point2, normal_dist):
     return dist/normal_dist
 
 def vib_live(pbint, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init ) :
-    if pbint == 9 or pbint == 10 : 
-        vib = abs(abs(ligne_shoulders) - abs(ligne_shoulders_init))
-        inter = [6.5, 10]
+    max_norm = 255
+    pb_novib = [1,2,3,4,5,6, 7,8, 19]
+    pb_vib = [9,10,11,13,16,17,20,21,22,23]
+    pb_vib_inv = [12,14,15,18]
+
+    if pbint== 9 or pbint == 10 : 
+        crit = abs(abs(ligne_shoulders) - abs(ligne_shoulders_init))
+        inter = [7, 10]
 
     elif pbint == 11 or pbint == 12 :
-        vib = dist_shoulder / dist_shoulder_init
-        if pbint == 11 :
-            inter = [0.9,0.6] 
-        else :
-            inter = [1.05, 1.1]
-            
-
+        crit = dist_shoulder / dist_shoulder_init
+        if pbint == 11 : inter = [1.05, 1.1]
+        else : inter = [0.9,0.6] 
+        
     elif pbint == 13 or pbint == 14 :
-        vib = dist_hip/dist_hip_init
-        if pbint == 13 :
-            inter = [0.9, 0.75] 
-        else : 
-            inter = [1.02, 1.1]
+        crit = dist_hip/dist_hip_init
+        if pbint == 13 : inter = [1.05, 1.1]
+        else : inter = [0.9, 0.75] 
     
     elif pbint == 15 or pbint == 16 :
-        vib = ligne_hips_init - ligne_hips
-        if pbint == 15 :
-            inter = [-2.5, -8] 
-        else :
-            inter = [3, 8]
+        crit = ligne_hips_init - ligne_hips
+        if pbint == 15 : inter = [-2.5, -8] 
+        else :inter = [3, 8]
 
     elif pbint == 17 or pbint == 18 :
-        vib = abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])
-        if pbint == 17 :
-            inter = [5, -40]
-        else :
-            inter =  [30, 60]
+        crit = abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])
+        if pbint == 17 : inter = [5, -40]
+        else : inter =  [30, 60]
 
     elif pbint == 20 or pbint == 21 or pbint == 22 or pbint == 23 :
-        vib = dist_knee/dist_knee_init
-        if pbint == 20 or pbint == 21 :
-            inter = [1.3, 0.8] 
-        else :
-            inter =  [1.6, 2.1]
-    else : 
-        vib = 0
-        inter = [0,0]
+        crit = dist_knee/dist_knee_init
+        if pbint == 20 or pbint == 21 : inter = [1.3, 0.8] 
+        else : inter =  [1.6, 2.1]
 
-    if pbint == 11 or pbint == 13 or pbint == 15 or pbint == 17 or pbint == 20 or pbint == 21 :
-        if vib < inter[0] :
-            vib = 0
-    else :
-        if vib > inter[0] :
-            vib = 0
+    if pbint in pb_vib : vib = (crit -inter[0]) * (max_norm/(inter[1]-inter[0]))
+    elif pbint in pb_vib_inv : vib = max_norm - (crit -inter[1]) * (max_norm/(inter[0]-inter[1]))
+    else : vib = 0
+
+    vib = int(np.clip(vib, 0, 255))
 
     if 21<=pbint<=22 : vibreur_id = 2 #genou gauche
     elif pbint == 23 or pbint ==20 : vibreur_id = 1 #genou droit 
     else : vibreur_id = 0 #dos
 
-    return pbint, vib, inter, vibreur_id
-
-import pyaudio
-from speech_recognition import Recognizer, Microphone, AudioFile
-
-
-# recognizer = Recognizer()
-# with Microphone() as source:
-#     print("Réglage du bruit ambiant... Patientez...")
-#     recognizer.adjust_for_ambient_noise(source)
-#     print("Vous pouvez parler...")
-#     recorded_audio = recognizer.listen(source)
-#     print("Enregistrement terminé !")
-    
-# # Reconnaissance de l'audio
-# try:
-#     print("Reconnaissance du texte...")
-#     text = recognizer.recognize_google(
-#             recorded_audio, 
-#             language="fr-FR"
-#         )
-#     print("Vous avez dit : {}".format(text))
-# except Exception as ex:
-#     print(ex)
+    return str(vib), vibreur_id

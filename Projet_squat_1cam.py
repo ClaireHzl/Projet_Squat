@@ -8,13 +8,28 @@ import time
 from collections import Counter
 from playsound import playsound
 import pyaudio
+from speech_recognition import Recognizer, Microphone, AudioFile
 import os, sys
+import socket
 
 
 # setting our variables
 tab_pb_int, list_pb=[], []
 count, vib = 0, 0
-squat, squat_ok, squat_pb1, vib_bool = False, False, False, False
+audio_bool, squat, squat_ok, squat_pb1, vib_bool = False, False, False, False, False
+
+#Electronics initialisation 
+UDP_IP_1 = '192.168.112.7'
+UDP_IP = ['192.168.250.7', '192.168.250.208', '192.168.250.208']
+UDP_PORT = 8000
+MESSAGE1, MESSAGE2, MESSAGE3 = b"255", b"0", b"0"
+MESSAGE = [b"255", b"255",b"255"] 
+sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
+sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
+sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
+sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
+
 
 #Mediapipe initialisation
 mp_drawing = mp.solutions.drawing_utils
@@ -26,9 +41,30 @@ path = "./Audios"
 audio_files = os.listdir(path) # 27 audios
 audio_files.sort()
 
+# recognizer = Recognizer()
+# with Microphone() as source:
+#     playsound(f"{path}/ready.mp3",  block=False)
+
+#     while not audio_bool : 
+#         recorded_audio = recognizer.listen(source, phrase_time_limit = 5)
+
+#         try:
+#             print("Reconnaissance du texte...")
+#             voice_command = recognizer.recognize_google(
+#                         recorded_audio, 
+#                         language="fr-FR"
+#                     ).lower()
+#             print("Vous avez dit : {}".format(voice_command))
+#             if "oui" in voice_command : audio_bool = True
+
+#         except Exception as ex:
+#             print(ex)
+
+
 #Recording by camera and showing on the laptop
 cap = cv2.VideoCapture(1,cv2.CAP_DSHOW)
 out = video_init(cap)
+
 
 #Using Mediapipe on the camera image
 with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
@@ -53,17 +89,17 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
-            cv2.putText(image, str(dist_hip / dist_hip_init), 
+            cv2.putText(image, str(ligne_shoulders - ligne_shoulders_init), 
                            tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
-            cv2.putText(image, str(round(abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]),4) ), 
+            cv2.putText(image, str(abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) ), 
                            tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
             
-            cv2.putText(image, str(dist_knee/dist_knee_init), 
+            cv2.putText(image, str(ligne_hips_init - ligne_hips), 
                            tuple(np.multiply(knee[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 0, 255), 2, cv2.LINE_AA
                                 )
@@ -75,7 +111,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             ## if a first problem has been detected on one squat, the second problem will have a higher delay
             if squat_pb1 == False : lim_count = 10
-            else : lim_count = 30
+            else : lim_count = 50
 
             # if a problem is detected a sufficient number of times, we play the audio and launch the vibrator boolean
             if tab_pb_int != [] and count > lim_count : 
@@ -92,8 +128,12 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
             #vibrator part for errors on knees, shoulders and hips
             if vib_bool :
-                pbint, vib, inter, vibreur_id = vib_live(most_pb, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init )
-                #send vibration 
+                vib, vibreur_id = vib_live(most_pb, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init )
+                message = bytes(vib, "utf8")
+                print("vibration = ", message)
+                sock.sendto(message, (UDP_IP_1, UDP_PORT))
+                #sock.sendto(message, (UDP_IP[vibreur_id], UDP_PORT))
+                print("vibration envoyée")
                     
 
             # when the person is doing a squat, we collect all the errors by order of priority
@@ -111,29 +151,29 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                         tab_pb_int.append(2)
 
                 # tête 
-                elif abs(ligne_ear - ligne_ear_init) > 7 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.04 for i in range (2)): 
-                    if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.04 : 
-                        text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
-                        tab_pb_int.append(4)
-                    elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.04 : 
-                        text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
-                        tab_pb_int.append(5)
-                    else : text_pb = "NOT GOOD, tete inclinee"
+                # elif abs(ligne_ear - ligne_ear_init) > 7 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.04 for i in range (2)): 
+                #     if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.04 : 
+                #         text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
+                #         tab_pb_int.append(4)
+                #     elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.04 : 
+                #         text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
+                #         tab_pb_int.append(5)
+                #     else : text_pb = "NOT GOOD, tete inclinee"
 
-                elif (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
-                        text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
-                        tab_pb_int.append(6)
+                # elif (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
+                #         text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
+                #         tab_pb_int.append(6)
                 
-                elif abs(ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]) > 7 : #8
-                        if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
-                            text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                            tab_pb_int.append(7)
-                        else : 
-                            text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                            tab_pb_int.append(8)
+                # elif abs(ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]) > 7 : #8
+                #         if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
+                #             text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                #             tab_pb_int.append(7)
+                #         else : 
+                #             text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                #             tab_pb_int.append(8)
                                            
                 ##shoulders      
-                elif abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) > 6.5 and  0.9 < dist_shoulder / dist_shoulder_init < 1.05 : #-0.005 < dist_shoulder_init - dist_shoulder < 0.05 : 
+                elif abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) > 7 and  0.9 < dist_shoulder / dist_shoulder_init < 1.05 : #-0.005 < dist_shoulder_init - dist_shoulder < 0.05 : 
                 #elif ligne_shoulders > -12 or ligne_shoulders < -27 : #(ligne_shoulders+ligne_feet_init > 3 or  ligne_shoulders+ligne_feet_init < -15) :
                     if ligne_shoulders - ligne_shoulders_init > 0 : 
                         text_pb = f"NOT GOOD epaule {autre_cote} trop haute, {ligne_shoulders}"
@@ -150,7 +190,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     tab_pb_int.append(12)
 
                 ## hips
-                elif dist_hip/dist_hip_init > 1.02 : #dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
+                elif dist_hip/dist_hip_init > 1.05 : #dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
                     text_pb = f"NOT GOOD hanche {autre_cote} en avant, {dist_hip_init- dist_hip}"
                     tab_pb_int.append(13)     
                 elif dist_hip/dist_hip_init < 0.9 : #dist_hip_init- dist_hip > 0.02 : #dist_hip/dist_hip_init < 0.88 : #(1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
@@ -161,7 +201,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     text_pb = f"NOT GOOD hanche {cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
                     tab_pb_int.append(15)
 
-                elif ligne_hips_init - ligne_hips > 3  : 
+                elif ligne_hips_init - ligne_hips > 7  : 
                     text_pb = f"NOT GOOD hanche {autre_cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
                     tab_pb_int.append(16)
 
@@ -215,7 +255,8 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     squat_ok = True 
                 vib_bool, squat, squat_pb1 = False, False, False
                 tab_pb_int, list_pb = [], []
-                count = 0
+                count, vib = 0, 0
+
                     
         except:
             pass
