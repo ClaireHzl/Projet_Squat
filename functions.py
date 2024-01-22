@@ -193,6 +193,7 @@ def distance(point1, point2, normal_dist):
 
 def vib_live(pbint, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init ) :
     max_norm = 255
+    min_norm=100
     pb_novib = [1,2,3,4,5,6, 7,8, 19]
     pb_vib = [9,10,11,13,16,17,20,21,22,23]
     pb_vib_inv = [12,14,15,18]
@@ -208,26 +209,26 @@ def vib_live(pbint, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_s
         
     elif pbint == 13 or pbint == 14 :
         crit = dist_hip/dist_hip_init
-        if pbint == 13 : inter = [1.05, 1.1]
-        else : inter = [0.9, 0.75] 
+        if pbint == 13 : inter = [1.07, 1.1]
+        else : inter = [0.85, 0.75] 
     
     elif pbint == 15 or pbint == 16 :
         crit = ligne_hips_init - ligne_hips
         if pbint == 15 : inter = [-2.5, -8] 
-        else :inter = [3, 8]
+        else :inter = [6, 10]
 
     elif pbint == 17 or pbint == 18 :
         crit = abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])
-        if pbint == 17 : inter = [5, -40]
-        else : inter =  [30, 60]
+        if pbint == 17 : inter = [30, 60]
+        else : inter = [0, -40]
 
     elif pbint == 20 or pbint == 21 or pbint == 22 or pbint == 23 :
         crit = dist_knee/dist_knee_init
         if pbint == 20 or pbint == 21 : inter = [1.3, 0.8] 
         else : inter =  [1.6, 2.1]
 
-    if pbint in pb_vib : vib = (crit -inter[0]) * (max_norm/(inter[1]-inter[0]))
-    elif pbint in pb_vib_inv : vib = max_norm - (crit -inter[1]) * (max_norm/(inter[0]-inter[1]))
+    if pbint in pb_vib : vib = min_norm + (crit -inter[0]) * ((max_norm-min_norm)/(inter[1]-inter[0]))
+    elif pbint in pb_vib_inv : vib = max_norm - (min_norm +(crit -inter[1]) * ((max_norm-min_norm)/(inter[0]-inter[1])))
     else : vib = 0
 
     vib = int(np.clip(vib, 0, 255))

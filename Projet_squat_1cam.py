@@ -19,16 +19,9 @@ count, vib = 0, 0
 audio_bool, squat, squat_ok, squat_pb1, vib_bool = False, False, False, False, False
 
 #Electronics initialisation 
-UDP_IP_1 = '192.168.112.7'
-UDP_IP = ['192.168.250.7', '192.168.250.208', '192.168.250.208']
+UDP_IP = ['192.168.112.7', '192.168.250.208', '192.168.250.208'] #back, right knee, left knee
 UDP_PORT = 8000
-MESSAGE1, MESSAGE2, MESSAGE3 = b"255", b"0", b"0"
-MESSAGE = [b"255", b"255",b"255"] 
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
-sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
-sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
-sock.sendto(MESSAGE1, (UDP_IP_1, UDP_PORT))
 
 
 #Mediapipe initialisation
@@ -89,12 +82,12 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 0, 66), 2, cv2.LINE_AA
                                 )
             
-            cv2.putText(image, str(ligne_shoulders - ligne_shoulders_init), 
+            cv2.putText(image, str(dist_hip/dist_hip_init), 
                            tuple(np.multiply(shoulder[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA
                                 )
             
-            cv2.putText(image, str(abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) ), 
+            cv2.putText(image, str(ligne_knees), 
                            tuple(np.multiply(hip[1], [640, 480]).astype(int)), 
                            cv2.FONT_HERSHEY_DUPLEX, 0.5, (79, 121, 66), 2, cv2.LINE_AA
                                 )
@@ -131,7 +124,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                 vib, vibreur_id = vib_live(most_pb, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init )
                 message = bytes(vib, "utf8")
                 print("vibration = ", message)
-                sock.sendto(message, (UDP_IP_1, UDP_PORT))
+                sock.sendto(message, (UDP_IP[vibreur_id], UDP_PORT))
                 #sock.sendto(message, (UDP_IP[vibreur_id], UDP_PORT))
                 print("vibration envoyée")
                     
@@ -146,31 +139,31 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     text_pb = f"NOT GOOD, pied rentres {dist_feet - dist_heel}"
                     tab_pb_int.append(1)
 
-                elif any(heel_init[i][1] - heel[i][1] > 0.01 for i in range(2)):
+                elif any(heel_init[i][1] - heel[i][1] > 0.015 for i in range(2)):
                         text_pb = f"NOT GOOD talons, {heel_init[ind_cote][1] - heel[ind_cote][1]}"
                         tab_pb_int.append(2)
 
                 # tête 
-                # elif abs(ligne_ear - ligne_ear_init) > 7 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.04 for i in range (2)): 
-                #     if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.04 : 
-                #         text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
-                #         tab_pb_int.append(4)
-                #     elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.04 : 
-                #         text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
-                #         tab_pb_int.append(5)
-                #     else : text_pb = "NOT GOOD, tete inclinee"
+                elif abs(ligne_ear - ligne_ear_init) > 7 and any(dist_ear_should_x_init[i]- dist_ear_should_x[i] > 0.04 for i in range (2)): 
+                    if dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote] > 0.04 : 
+                        text_pb = f"NOT GOOD, tete inclinee {cote} : {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_cote]- dist_ear_should_x[ind_cote],4)}"
+                        tab_pb_int.append(4)
+                    elif dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote] > 0.04 : 
+                        text_pb = f"NOT GOOD, tete inclinee {autre_cote}: {round(ligne_ear - ligne_ear_init,3),round(dist_ear_should_x_init[ind_autre_cote]- dist_ear_should_x[ind_autre_cote],3)}"
+                        tab_pb_int.append(5)
+                    else : text_pb = "NOT GOOD, tete inclinee"
 
-                # elif (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
-                #         text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
-                #         tab_pb_int.append(6)
+                elif (angle_head_init[ind_cote]-angle_head[ind_cote] < -6 )  and (nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] )>0.03) : #or angle_head_init[ind_cote]-angle_head[ind_cote]> 250 # < -4,5
+                        text_pb = f"NOT GOOD, tete trop avancée : {round(angle_head_init[ind_cote]-angle_head[ind_cote], 4), round(nose_init[0]  - shoulder_init[ind_autre_cote][0]- (nose[0] - shoulder[ind_autre_cote][0] ),4)}"
+                        tab_pb_int.append(6)
                 
-                # elif abs(ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]) > 7 : #8
-                #         if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
-                #             text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                #             tab_pb_int.append(7)
-                #         else : 
-                #             text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
-                #             tab_pb_int.append(8)
+                elif abs(ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]) > 7 : #8
+                        if ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote] < 0 : 
+                            text_pb = f"NOT GOOD, tete  vers le haut : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                            tab_pb_int.append(7)
+                        else : 
+                            text_pb = f"NOT GOOD, tete  vers le bas : {ligne_gaze_init[ind_cote] - ligne_gaze[ind_cote]}"
+                            tab_pb_int.append(8)
                                            
                 ##shoulders      
                 elif abs(abs(ligne_shoulders) - abs(ligne_shoulders_init)) > 7 and  0.9 < dist_shoulder / dist_shoulder_init < 1.05 : #-0.005 < dist_shoulder_init - dist_shoulder < 0.05 : 
@@ -190,10 +183,10 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     tab_pb_int.append(12)
 
                 ## hips
-                elif dist_hip/dist_hip_init > 1.05 : #dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
+                elif dist_hip/dist_hip_init > 1.07 : #dist_hip_init- dist_hip < - 0.002 : #and dist_hip/dist_hip_init >  1.15 : #(1.01+ligne_feet_init*0.005)*dist_hip_init : #1.08 pour 14 et 1.13 pour 25
                     text_pb = f"NOT GOOD hanche {autre_cote} en avant, {dist_hip_init- dist_hip}"
                     tab_pb_int.append(13)     
-                elif dist_hip/dist_hip_init < 0.9 : #dist_hip_init- dist_hip > 0.02 : #dist_hip/dist_hip_init < 0.88 : #(1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
+                elif dist_hip/dist_hip_init < 0.85 : #dist_hip_init- dist_hip > 0.02 : #dist_hip/dist_hip_init < 0.88 : #(1.06 - ligne_feet_init*0.01)*dist_hip_init : #0.88 à 16 et 0.92 avec 14 d'angle
                     text_pb = f"NOT GOOD hanche {cote} en avant, {dist_hip_init- dist_hip}"
                     tab_pb_int.append(14)
                 
@@ -201,19 +194,19 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                     text_pb = f"NOT GOOD hanche {cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
                     tab_pb_int.append(15)
 
-                elif ligne_hips_init - ligne_hips > 7  : 
+                elif ligne_hips_init - ligne_hips > 6  : 
                     text_pb = f"NOT GOOD hanche {autre_cote} trop basse, {round(ligne_hips_init - ligne_hips, 4)}"
                     tab_pb_int.append(16)
 
                 
 
                 ##torso
-                elif abs(angle_knee[ind_autre_cote])<160 and (abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) < 5 or  abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30): 
+                elif abs(angle_knee[ind_autre_cote])<160 and (abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) < 0 or  abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30): 
                     if abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote]) > 30: 
-                        text_pb=f"NOT GOOD, trop penche {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
+                        text_pb=f"NOT GOOD, trop penche {abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])}"
                         tab_pb_int.append(17)
                     else:               
-                        text_pb=f"NOT GOOD, buste trop droit {angle_knee[ind_autre_cote] - angle_hip[ind_autre_cote]}"
+                        text_pb=f"NOT GOOD, buste trop droit {abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])}"
                         tab_pb_int.append(18)
 
 
@@ -236,10 +229,10 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                 #if the knee spacing is too small or the contralateral knee is lower
                 elif dist_knee/dist_knee_init < 1.1 or (any(abs(i)<150 for i in angle_knee) and (dist_knee/dist_knee_init < 1.3  or  knee[ind_autre_cote][1]>knee[ind_cote][1])):
                     #depending on knee line angle: 
-                    if ligne_knees < - 5 or knee[ind_autre_cote][1]>knee[ind_cote][1] : #-12
+                    if  ligne_knees < -10 or knee[ind_autre_cote][0] > heel[ind_autre_cote][0] or knee[ind_autre_cote][1]>knee[ind_cote][1] : #ligne_knees < - 5
                         text_pb=f"NOT GOOD, genou {autre_cote} vers l'interieur {round(ligne_knees_init - ligne_knees,2)}"
                         tab_pb_int.append(20)
-                    elif ligne_knees > -3 : 
+                    elif ligne_knees > -7 : 
                         text_pb=f"NOT GOOD, genou {cote} vers l'interieur {round(ligne_knees,2)}"
                         tab_pb_int.append(21)
                     else : text_pb=f"NOT GOOD, genou vers l'intérieur {round(ligne_knees,2)}"
@@ -278,7 +271,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         cv2.imshow('Squat Correction',image)
 
         #stopping the recording if CTRL+C or if the person leaves the scene
-        if cv2.waitKey(10) & 0xFF == ord('q') or foot[0][1] > 1 or foot[1][1] > 1:
+        if cv2.waitKey(10) & 0xFF == ord('q') or any(val < 0 or val > 1 for sublist in foot for val in sublist) : # or foot[0][1] > 1 or foot[1][1] > 1:
             break
 
     cap.release()
