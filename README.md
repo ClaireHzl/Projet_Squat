@@ -16,13 +16,11 @@ This code allows to get an auditory and haptic feedback on a squat workout. It h
 - Code Editor (Visual Studio Code or else)
 - Arduino IDE 
 
-
 ### Set-up
 The carpet is placed on the floor. The 3 legs of the camera tripod are deployed to the maximum. The camera is placed at the end of the rope straps and is linked to the computer. The camera must be oriented in profile format (the image is rotated by -90° during pre-processing). 
 
 One vibrator is put in the back, the other two are put above the knees. 
 
-## Algorithm part
 ### Coding Material
 
 If you don't already have them, some importations are needed.
@@ -37,7 +35,9 @@ pip install pyaudio
 pip install SpeechRecognition
 ```
 
-### How it is working
+## How it is working
+
+
 The algorithm is built as follow :
 
 1.  Speech Recognition : the program awaits for the user to say "oui" to the question "es-tu prêt ?"
@@ -56,9 +56,18 @@ The algorithm is built as follow :
 
 
 
-### In details 
+## In details 
 
-#### Calibration
+### MediaPipe
+
+MediaPipe is an opensource program of machine learning from Google. We use the [Pose Landmark Detection](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) solution. That allows to get the human body landmarks as follow. 
+
+![landmarks](https://camo.githubusercontent.com/54e5f06106306c59e67acc44c61b2d3087cc0a6ee7004e702deb1b3eb396e571/68747470733a2f2f6d65646961706970652e6465762f696d616765732f6d6f62696c652f706f73655f747261636b696e675f66756c6c5f626f64795f6c616e646d61726b732e706e67)
+
+
+
+
+### Calibration
 
 The function *calibration* is used as below. 
 
@@ -76,14 +85,14 @@ From that, we extract :
 Then, all needed distances, line orientations and angles are determined according to the overlying values. 
 
 
-#### Errors ID
+### Errors ID
 
 Each error type is characterized by an integer from 1 to 23. They are structured according to an order of priority based on the importance of the error, established by a sports professional.
 
 Therefore, according to the coordinates, angles and distances of the landmarks, if an error is detected, the corresponding integer will be output. If not, it's a good squat, the corresponding integer is 0. 
 
 
-#### On each squat
+### On each squat
 
 Landmarks are updated on each frame (approximately every 60ms). The tab "tab_pb_int" is filled with the corresponding integer of each frame.
 
@@ -96,7 +105,7 @@ The tab is then reset to see if there is a second error on the same squat (consi
 When the vibration boolean is on, if the problem is on the shoulders, the torso, the hips or the knees, the distance between the current value and the normal is calculated and the ID of the vibrator that needs to be on is defined. Then the socket message is sent each frame the error is still on, with real-time value adjustment. 
 
 
-#### At the end of a squat 
+### At the end of a squat 
 Each time the person has straight legs, the tab of integers is emptied. 
 If the previous squat presented no errors, there is an audio feedback to tell the movement was good. 
 
