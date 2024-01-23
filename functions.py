@@ -1,19 +1,22 @@
 import math
 import numpy as np
+from datetime import datetime
 import cv2
 import mediapipe as mp
 import time
 
+#function to write the video with landmarks in the current directory
 def video_init(cap) : 
-    #on inverse la largeur et la hauteur car on va faire une rotation de l'image
+    #inverted width and height because of rotated image
     height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) + 0.5)
     width = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) + 0.5)
-
     size = (width, height)
     fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-    out = cv2.VideoWriter('your_video.mp4', fourcc, 10.0, size, True)
+    #the name of the video will be set with the date and time
+    out = cv2.VideoWriter(f'squat_{datetime.now().strftime("%d%m%y_%H%M")}.mp4', fourcc, 10.0, size, True)
     return out
 
+#function to initialize the image processing before getting the landmarks
 def landmarks_init (cap, pose):
     ret, frame = cap.read()
     frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -24,30 +27,32 @@ def landmarks_init (cap, pose):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     return image, results
 
+
+## Function to determine which side is closer to the camera 
 def side(landmarks, mp_pose) :
     if landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y < landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y  : 
-        ind_cote = 1
-        ind_autre_cote = 0
-        cote = 'cote gauche'
-        autre_cote = 'cote droit'
-
+        ind_side = 1
+        ind_other_side = 0
+        side = 'left side'
+        other_side = 'right side'
     else : 
-        ind_cote=0
-        ind_autre_cote = 1
-        cote = 'cote droit'
-        autre_cote = 'cote gauche'
-    return ind_cote, ind_autre_cote, cote, autre_cote
+        ind_side= 0
+        ind_other_side = 1
+        side = 'right side'
+        other_side = 'left side'
+    return ind_side, ind_other_side, side, other_side
 
 
 
 def calibration (mp_pose, pose, cap, start) : 
+    #initialization of empty tabs
     eye_right, eye_left, ear_right, ear_left, nose_init, shoulder_right, shoulder_left, hip_left, hip_right, knee_right, knee_left, ankle_right, ankle_left, heel_right, heel_left, foot_right, foot_left  = ([] for i in range(17))
 
-    #initialisation avec calibration
+    #measures of landmarks for 5 seconds 
     while (time.time()-start)< 5  : 
         image, results = landmarks_init (cap, pose)
         
-        # Extract landmarks
+        # Extract landmarks on each frame 
         try:
             landmarks = results.pose_landmarks.landmark
             
@@ -75,6 +80,7 @@ def calibration (mp_pose, pose, cap, start) :
         except:
             pass
 
+    #record the median of each coordinates           
     eye_init = [np.median(eye_right, axis = 0).tolist(), np.median(eye_left, axis = 0).tolist()]
     ear_init = [np.median(ear_right, axis = 0).tolist(), np.median(ear_left, axis = 0).tolist()]
     nose_init = np.median(nose_init, axis = 0).tolist()
@@ -85,11 +91,11 @@ def calibration (mp_pose, pose, cap, start) :
     heel_init = [np.median(heel_right, axis = 0).tolist(), np.median(heel_left, axis = 0).tolist()]
     foot_init = [np.median(foot_right, axis = 0).tolist(), np.median(foot_left, axis = 0).tolist()]
     
-    # on définit de quel côté on est placé : 
-    ind_cote, ind_autre_cote, cote, autre_cote = side(landmarks, mp_pose)
-    normal_dist = math.sqrt((shoulder_init[ind_cote][0] - heel_init[ind_cote][0]) ** 2 + (shoulder_init[ind_cote][1] - heel_init[ind_cote][1]) ** 2)
+    #definition of the closer side and the distance used to normalize every other distances 
+    ind_side, ind_other_side, side, other_side = side(landmarks, mp_pose)
+    normal_dist = math.sqrt((shoulder_init[ind_side][0] - heel_init[ind_side][0]) ** 2 + (shoulder_init[ind_side][1] - heel_init[ind_side][1]) ** 2)
 
-    #Lignes 
+    #Measures of initial line orientations
     ligne_feet_init = angle_of_singleline(foot_init[0], foot_init[1])
     ligne_gaze_init = [angle_from_footline(nose_init, ear_init[0], ligne_feet_init), angle_from_footline(nose_init, ear_init[1], ligne_feet_init)]
     ligne_ear_init = angle_from_footline(ear_init[0],ear_init[1], ligne_feet_init)
@@ -97,39 +103,40 @@ def calibration (mp_pose, pose, cap, start) :
     ligne_hips_init= angle_from_footline(hip_init[0],hip_init[1], ligne_feet_init)
     ligne_knees_init = angle_from_footline(knee_init[0], knee_init[1], ligne_feet_init)
 
+    #Measure of initial angle
     angle_head_init = [calculate_angle(nose_init, ear_init[0],shoulder_init[0]), calculate_angle(nose_init,ear_init[1], shoulder_init[1])]
 
-    #distances 
+    #Measure of initial distances 
     dist_ear_should_x_init = [abs(ear_init[0][0] - shoulder_init[0][0])/normal_dist, abs(ear_init[1][0]- shoulder_init[1][0])/normal_dist]
     dist_shoulder_init = distance(shoulder_init[0], shoulder_init[1], normal_dist)
     dist_hip_init = distance(hip_init[0], hip_init[1], normal_dist)
     dist_knee_init = distance(knee_init[0], knee_init[1], normal_dist)
     dist_feet_init=distance(foot_init[0], foot_init[1], normal_dist)
 
-    return ind_cote, ind_autre_cote, cote, autre_cote, normal_dist, nose_init, shoulder_init, heel_init, ligne_ear_init, dist_ear_should_x_init, dist_shoulder_init, dist_hip_init, dist_knee_init, ligne_gaze_init, ligne_shoulders_init, ligne_hips_init, ligne_knees_init, ligne_feet_init, angle_head_init
+    return ind_side, ind_other_side, side, other_side, normal_dist, nose_init, shoulder_init, heel_init, ligne_ear_init, dist_ear_should_x_init, dist_shoulder_init, dist_hip_init, dist_knee_init, ligne_gaze_init, ligne_shoulders_init, ligne_hips_init, ligne_knees_init, ligne_feet_init, angle_head_init
 
 
 
-#calcul des paramètres en temps réel : 
+#real-time parameter calculation on each frame
 def realtime_param (landmarks, mp_pose, normal_dist, ligne_feet_init) :
-    #visage 
+    #face 
     #eye = [[landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE_INNER.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE_INNER.value].y]]
     ear = [[landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EAR.value].y],[landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EAR.value].y]]
     nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
 
-    #membre sup
+    #superior limb
     shoulder = [[landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]]
 
-    # membre inf
+    # inferior limb
     hip = [[landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]]
     knee = [[landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y]]
     
-    #pieds
+    #feet
     ankle = [[landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]]
     heel = [[landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_HEEL.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].x,landmarks[mp_pose.PoseLandmark.LEFT_HEEL.value].y]]
     foot = [[landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_FOOT_INDEX.value].y], [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x,landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]]
 
-    #Lignes du regard, épaules, hanches et genoux : doivent être à 0°
+    #Measures of different line orientations, according to the initial orientation of the feet
     ligne_gaze = [angle_from_footline(nose, ear[0], ligne_feet_init), angle_from_footline(nose, ear[1], ligne_feet_init)]
     ligne_shoulders = angle_from_footline(shoulder[0],shoulder[1], ligne_feet_init)
     ligne_hips= angle_from_footline(hip[0],hip[1], ligne_feet_init)
@@ -137,12 +144,12 @@ def realtime_param (landmarks, mp_pose, normal_dist, ligne_feet_init) :
     ligne_feet = angle_from_footline(foot[0], foot[1], ligne_feet_init)
     ligne_ear = angle_from_footline(ear[0],ear[1], ligne_feet_init)
 
-    #Angles des segments
+    #Measure of segment angles
     angle_knee = [calculate_angle(hip[0],knee[0], ankle[0]), calculate_angle(hip[1],knee[1], ankle[1])]
     angle_hip = [calculate_angle(shoulder[0],hip[0],knee[0]), calculate_angle(shoulder[1],hip[1],knee[1])]
     angle_head = [calculate_angle(nose,ear[0],shoulder[0]), calculate_angle(nose, ear[1], shoulder[1])]
     
-    #distances 
+    #Measures of distances (normalized standardized according to heel-shoulder height)
     dist_ear_should_x = [abs(ear[0][0] - shoulder[0][0])/normal_dist, abs(ear[1][0]- shoulder[1][0])/normal_dist]
     dist_shoulder = distance(shoulder[0], shoulder[1], normal_dist)
     dist_hip = distance(hip[0], hip[1], normal_dist)
@@ -153,13 +160,13 @@ def realtime_param (landmarks, mp_pose, normal_dist, ligne_feet_init) :
     return ear, nose, shoulder, hip, knee, ankle, heel, foot, ligne_gaze, ligne_shoulders, ligne_hips, ligne_knees, ligne_feet, ligne_ear, angle_knee, angle_hip, angle_head, dist_ear_should_x, dist_shoulder, dist_hip, dist_knee, dist_heel, dist_feet
 
 
-## on définit les fonctions de calcul d'angle entre 2 points, avec l'horizontale et de distance : 
+## Angle, distance and orientation calculation functions
 
-#entre 3 points
+#Angle in degrees between 3 points
 def calculate_angle(a,b,c):
-    a = np.array(a) # Point proximal
-    b = np.array(b) # intersection
-    c = np.array(c) # Point distal
+    a = np.array(a) # Proximal point
+    b = np.array(b) # Intersection
+    c = np.array(c) # Distal point
     
     radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
     angle = np.abs(radians*180.0/np.pi)
@@ -170,13 +177,13 @@ def calculate_angle(a,b,c):
         
     return angle
 
-#entre 2 points et l'horizontale 
+#between 2 points and the horizontal
 def angle_of_singleline(point1, point2):
     x_diff = point2[0] - point1[0]
     y_diff = point2[1] - point1[1]
     return math.degrees(math.atan2(y_diff, x_diff))
 
-# entre 2 points et la ligne des pieds
+#between 2 points and the initial feet line
 def angle_from_footline(point1,point2, ligne_feet_init) : 
     angle = angle_of_singleline(point1, point2) - ligne_feet_init 
     if angle >180.0:
@@ -186,55 +193,66 @@ def angle_from_footline(point1,point2, ligne_feet_init) :
     return angle
 
 
-#distance entre 2 points 
+#normalized distance between 2 points 
 def distance(point1, point2, normal_dist):
     dist = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1] - point1[1]) ** 2)
     return dist/normal_dist
 
-def vib_live(pbint, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_autre_cote, angle_hip, dist_knee, dist_knee_init ) :
-    max_norm = 255
-    min_norm=100
-    pb_novib = [1,2,3,4,5,6, 7,8, 19]
-    pb_vib = [9,10,11,13,16,17,20,21,22,23]
-    pb_vib_inv = [12,14,15,18]
 
-    if pbint== 9 or pbint == 10 : 
-        crit = abs(abs(ligne_shoulders) - abs(ligne_shoulders_init))
-        inter = [7, 10]
 
-    elif pbint == 11 or pbint == 12 :
-        crit = dist_shoulder / dist_shoulder_init
-        if pbint == 11 : inter = [1.05, 1.1]
-        else : inter = [0.9,0.6] 
-        
-    elif pbint == 13 or pbint == 14 :
-        crit = dist_hip/dist_hip_init
-        if pbint == 13 : inter = [1.07, 1.1]
-        else : inter = [0.85, 0.75] 
+def vib_live(pbint, ligne_shoulders, ligne_shoulders_init, dist_shoulder, dist_shoulder_init,  dist_hip, dist_hip_init, ligne_hips_init, ligne_hips, angle_knee, ind_other_side, angle_hip, dist_knee, dist_knee_init ) :
+    max_norm = 255 #maximal value of vibration
+    min_norm= 100 #minimal value of vibration
+    pb_novib = [1,2,3,4,5,6, 7,8, 19] #problems without vibration feedback
+    pb_vib = [9,10,11,13,16,17,20,21,22,23] #problems with vibration feedback with a range in ascending order
+    pb_vib_inv = [12,14,15,18] #problems with vibration feedback with a range in descending order
+
+    if pbint in pb_novib : 
+        vib = 0
+        vibrator_id = 0
     
-    elif pbint == 15 or pbint == 16 :
-        crit = ligne_hips_init - ligne_hips
-        if pbint == 15 : inter = [-2.5, -8] 
-        else :inter = [6, 10]
+    #crit is the error criteria and inter is the range of errors [min,max]
+    else : 
+        if pbint== 9 or pbint == 10 : 
+            crit = abs(abs(ligne_shoulders) - abs(ligne_shoulders_init))
+            inter = [7, 10]
 
-    elif pbint == 17 or pbint == 18 :
-        crit = abs(angle_knee[ind_autre_cote]) - abs(angle_hip[ind_autre_cote])
-        if pbint == 17 : inter = [30, 60]
-        else : inter = [0, -40]
+        elif pbint == 11 or pbint == 12 :
+            crit = dist_shoulder / dist_shoulder_init
+            if pbint == 11 : inter = [1.05, 1.1]
+            else : inter = [0.9,0.6] 
+            
+        elif pbint == 13 or pbint == 14 :
+            crit = dist_hip/dist_hip_init
+            if pbint == 13 : inter = [1.07, 1.1]
+            else : inter = [0.85, 0.75] 
+        
+        elif pbint == 15 or pbint == 16 :
+            crit = ligne_hips_init - ligne_hips
+            if pbint == 15 : inter = [-2.5, -8] 
+            else :inter = [6, 10]
 
-    elif pbint == 20 or pbint == 21 or pbint == 22 or pbint == 23 :
-        crit = dist_knee/dist_knee_init
-        if pbint == 20 or pbint == 21 : inter = [1.3, 0.8] 
-        else : inter =  [1.6, 2.1]
+        elif pbint == 17 or pbint == 18 :
+            crit = abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side])
+            if pbint == 17 : inter = [30, 60]
+            else : inter = [0, -40]
 
-    if pbint in pb_vib : vib = min_norm + (crit -inter[0]) * ((max_norm-min_norm)/(inter[1]-inter[0]))
-    elif pbint in pb_vib_inv : vib = max_norm - (min_norm +(crit -inter[1]) * ((max_norm-min_norm)/(inter[0]-inter[1])))
-    else : vib = 0
+        elif pbint == 20 or pbint == 21 or pbint == 22 or pbint == 23 :
+            crit = dist_knee/dist_knee_init
+            if pbint == 20 or pbint == 21 : inter = [1.3, 0.8] 
+            else : inter =  [1.6, 2.1]
 
-    vib = int(np.clip(vib, 0, 255))
+        #normalization of the error range between 100 and 255
+        if pbint in pb_vib : vib = min_norm + (crit -inter[0]) * ((max_norm-min_norm)/(inter[1]-inter[0]))
+        elif pbint in pb_vib_inv : vib = max_norm - (min_norm +(crit -inter[1]) * ((max_norm-min_norm)/(inter[0]-inter[1])))
 
-    if 21<=pbint<=22 : vibreur_id = 2 #genou gauche
-    elif pbint == 23 or pbint ==20 : vibreur_id = 1 #genou droit 
-    else : vibreur_id = 0 #dos
+        #make sure to have values between 0 and 255, and setting the vibration to zero if it's under the min
+        vib = int(np.clip(vib, 0, max_norm))
+        if vib < min_norm : vib = 0
 
-    return str(vib), vibreur_id
+        #defining the id of the corresponding vibrator 
+        if 21<=pbint<=22 : vibrator_id = 2 #left knee
+        elif pbint == 23 or pbint ==20 : vibrator_id = 1 #right knee 
+        else : vibrator_id = 0 #back
+
+    return str(vib), vibrator_id #intensity of the vibrator and corresponding vibrator id 
