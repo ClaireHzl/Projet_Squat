@@ -64,7 +64,9 @@ The algorithm is built as follow :
 ### MediaPipe
 
 After preprocessing the image using OpenCV, we use Mediapipe to get human body landmarks as follow. MediaPipe is an opensource program of machine learning from Google. We use the [Pose Landmark Detection](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) solution. 
+
 ![landmarks](https://camo.githubusercontent.com/54e5f06106306c59e67acc44c61b2d3087cc0a6ee7004e702deb1b3eb396e571/68747470733a2f2f6d65646961706970652e6465762f696d616765732f6d6f62696c652f706f73655f747261636b696e675f66756c6c5f626f64795f6c616e646d61726b732e706e67)
+
 
 
 ### Calibration
@@ -130,4 +132,4 @@ Parameters :
 
 Mediapipe has been much used on pose detection in scientific litterature, but the accuracy is not perfect, depending on the angle of image acquisition and the color conditions (mean REMS of 12.5° in estimation of the knee angle on a squat, in the article from Dill and al [[1]](https://www.researchgate.net/publication/374081734_Accuracy_Evaluation_of_3D_Pose_Estimation_with_MediaPipe_Pose_for_Physical_Exercises)). 
 
-Another study seems to find a better performance with [MoveNet](https://www.tensorflow.org/hub/tutorials/movenet?hl=en) when the pose detection is made on a video capture [2] and the opensource YOLO program seems to have very good results too, especially the new version [YOLO NAS POSE](https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS-POSE.md), but we couldn't find any litterature to have objective measures, as the version is very recent. 
+Another study seems to find a better performance with [MoveNet](https://www.tensorflow.org/hub/tutorials/movenet?hl=en) when the pose detection is made on a video capture [[2](https://www.mdpi.com/1999-5903/14/12/380)] and the opensource YOLO program seems to have very good results too, especially the new version [YOLO NAS POSE](https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS-POSE.md), but we couldn't find any litterature to have objective measures, as the version is very recent. 
