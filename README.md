@@ -1,6 +1,6 @@
 # SQUAT Correction Project
 
-This code allows to get an auditory and haptic feedback on a squat workout. It has been specifically thought to be used by visually impaired people, but it could be used by anyone. 
+This code allows to get an auditory and vibrotactile feedback on a squat workout. It has been specifically thought to be used by visually impaired people, but it could be used by anyone. 
 
 ## Material
 
@@ -9,6 +9,7 @@ This code allows to get an auditory and haptic feedback on a squat workout. It h
 - 1 or 2 Camera RGB
 - 3 wireless vibrators 
 - Computer with operational speakers and microphone
+- Carpet with rope straps
 
 
 ### Softwares
@@ -19,7 +20,7 @@ This code allows to get an auditory and haptic feedback on a squat workout. It h
 ### Set-up
 The carpet is placed on the floor. The 3 legs of the camera tripod are deployed to the maximum. The camera is placed at the end of the rope straps and is linked to the computer. The camera must be oriented in profile format (the image is rotated by -90° during pre-processing). 
 
-One vibrator is put in the back, the other two are put above the knees. 
+One vibrator is put in the lower back, the other two are put above the knees. 
 
 ### Coding Material
 
@@ -40,19 +41,21 @@ pip install SpeechRecognition
 
 The algorithm is built as follow :
 
-1.  Speech Recognition : the program awaits for the user to say "oui" to the question "es-tu prêt ?"
+1. Initialization of all the parameters and the variables needed
+   
+2.  Speech Recognition : the program awaits for the user to say "oui" to the question "es-tu prêt ?"
 
-2.  Image processing with CV2 and Mediapipe  : 
+3.  Image processing with CV2 and Mediapipe : 
 
-     2.1. Calibration for 5 seconds : recording of all the coordinates, distances, angles of the initial body landmarks via the function *calibration*
+     3.1. Calibration for 5 seconds : recording of all the coordinates, distances, angles of the initial body landmarks via the function *calibration*
 
-     2.2. Detection of errors on squat workout : calculation of parameters related to the posture of the head, torso, shoulders, hips, knees and feet for each squat.
+     3.2. Detection of errors on the squat workout : calculation of parameters related to the posture of the head, torso, shoulders, hips, knees and feet for each squat.
 
     If an error is detected in > 7 frames on a single squat, there is an auditory feedback on how to improve the movement.
     
     If that error is linked to the shoulders, hips, or torso, there is also a vibratory feedback on the back. If that error is linked to one of the knees, there is a vibratory feedback on the knee involved.
 
-3.  Stop when the user leaves the scene
+4.  Algorithm exit when the user leaves the scene
 
 
 
@@ -60,11 +63,8 @@ The algorithm is built as follow :
 
 ### MediaPipe
 
-MediaPipe is an opensource program of machine learning from Google. We use the [Pose Landmark Detection](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) solution. That allows to get the human body landmarks as follow. 
-
+After preprocessing the image using OpenCV, we use Mediapipe to get human body landmarks as follow. MediaPipe is an opensource program of machine learning from Google. We use the [Pose Landmark Detection](https://developers.google.com/mediapipe/solutions/vision/pose_landmarker) solution. 
 ![landmarks](https://camo.githubusercontent.com/54e5f06106306c59e67acc44c61b2d3087cc0a6ee7004e702deb1b3eb396e571/68747470733a2f2f6d65646961706970652e6465762f696d616765732f6d6f62696c652f706f73655f747261636b696e675f66756c6c5f626f64795f6c616e646d61726b732e706e67)
-
-
 
 
 ### Calibration
@@ -121,3 +121,13 @@ Parameters :
 - message : string data converted in bytes, from 0 to 255. 
 
 - the type of problem switches on the matching vibrator and sends the data as long as the problem is on.
+
+
+
+## Areas of improving 
+
+### Pose detection
+
+Mediapipe has been much used on pose detection in scientific litterature, but the accuracy is not perfect, depending on the angle of image acquisition and the color conditions (mean REMS of 12.5° in estimation of the knee angle on a squat, in the article from Dill and al [[1]](https://www.researchgate.net/publication/374081734_Accuracy_Evaluation_of_3D_Pose_Estimation_with_MediaPipe_Pose_for_Physical_Exercises)). 
+
+Another study seems to find a better performance with [MoveNet](https://www.tensorflow.org/hub/tutorials/movenet?hl=en) when the pose detection is made on a video capture [2] and the opensource YOLO program seems to have very good results too, especially the new version [YOLO NAS POSE](https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS-POSE.md), but we couldn't find any litterature to have objective measures, as the version is very recent. 
