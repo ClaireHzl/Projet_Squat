@@ -119,13 +119,16 @@ The program is set to have only one "good squat" audio feedback until one later 
 
 ### Electronics
 The first version of the vibrator was only composed of the ESP32 board and the motor connected to a GPIO pin. However, the maximum tension that could be sent to the motor that way was the 3,3V from the board so the vibration was not powerful enough for it to be felt correctly during a squat.
+
 So we built a second version with a haptic driver (2605L from adafruit and sparkfun). Thus we could control the vibration of the motor on a much precise manner and range. The communication between the ESP32 and driver is done through I2C, so both SDA and SCL pins from board and driver have to be connected together:
 
 ![setup](https://github.com/ClaireHzl/Projet_Squat/assets/157631887/b1489261-68bd-49ff-b3cc-8278809a241b)
 
 ### Code
 The vibrators and computer are connected to a local Wi-Fi.
+
 We chose Udp as communication protocol because there is no need to protect the data as they are not sensitive, and it was simpler and faster not to send data from the vibrators to the computer.
+
 So there is only a Udp socket sending relevant data to each vibrator's IP adress : the type of problem switches on the matching vibrator, converts the error in bytes and send the message as long as the problem is on.The only drawback is that you have to know this IP beforehand and that the registration is not automatic.
 
 Other than that the code is pretty straightforward : 
