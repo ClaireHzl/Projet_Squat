@@ -7,7 +7,9 @@ This code allows to get an auditory and vibrotactile feedback on a squat workout
 ### Physical Material 
 
 - 1 or 2 Camera RGB
-- 3 wireless vibrators 
+- 3 wireless vibrators composed of
+     - electronics: 1 arduino ESP32 board + battery, 1 ERM motor, 1 switch and optionnaly 1 drv2605l driver (see schematics included)
+     - 3d printed casing and elastic straps to fix on users body
 - Computer with operational speakers and microphone
 - Carpet with rope straps
 
@@ -53,7 +55,7 @@ The algorithm is built as follow :
 
     If an error is detected in > 7 frames on a single squat, there is an auditory feedback on how to improve the movement.
     
-    If that error is linked to the shoulders, hips, or torso, there is also a vibratory feedback on the back. If that error is linked to one of the knees, there is a vibratory feedback on the knee involved.
+    If that error is linked to the shoulders, hips, torso or knees, the value of the error is sent to the correspondig vibrator and triggers a vibrotactile feedback proportional to this error.
 
 4.  Algorithm exit when the user leaves the scene
 
@@ -113,18 +115,18 @@ If the previous squat presented no errors, there is an audio feedback to tell th
 
 The program is set to have only one "good squat" audio feedback until one later squat presents errors (that's the role of the squat_ok boolean). 
 
-## Arduino part 
-The vibrators are receiving data in Wi-Fi connexion : the computer need to be connected to the same Wi-Fi as the vibrators. This connexion between the laptop code and the Arduino code on the vibrators is done by the socket package. 
+## Vibrators
 
-Parameters : 
+### Electronics
 
-- UDP_IP : to be set according to the IP of each of the 3 vibrators (in the following order : [back, right knee, left knee])
+### Code
+The vibrators and computer are connected to a local Wi-Fi.
+We chose Udp as communication protocol because there is no need to protect the data as they are not sensitive, and it was simpler and faster not to send data from the vibrators to the computer.
+So there is only a Udp socket sending relevant data to each vibrator's IP adress : the type of problem switches on the matching vibrator, converts the error in bytes and send the message as long as the problem is on.The only drawback is that you have to know this IP beforehand and that the registration is not automatic.
 
-- message : string data converted in bytes, from 0 to 255. 
-
-- the type of problem switches on the matching vibrator and sends the data as long as the problem is on.
-
-
+Other than that the code is pretty straightforward : 
+- for the first version the ESP32 board reads packages coming from the Udp socket, generates a PWM signal proportionnal to the value read and outputs it to the GPIO pin that is connected to the motor
+- for the second version, two threads run in parallel in order to have a real time precise control of the vibratory frequence : one thread tasked to read the Udp socket and update the value of the message (global parameter), and the other one tasked with controlling the vibration through the driver.
 
 ## Areas of improving 
 
