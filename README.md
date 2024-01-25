@@ -14,8 +14,8 @@ This code allows to get an auditory and vibrotactile feedback on a squat workout
 
 ### Softwares
 
-- Code Editor (Visual Studio Code or else)
-- Arduino IDE 
+- Code Editor (Visual Studio Code or else) - *Python language*
+- Arduino IDE - *C++ language*
 
 ### Set-up
 The carpet is placed on the floor. The 3 legs of the camera tripod are deployed to the maximum. The camera is placed at the end of the rope straps and is linked to the computer. The camera must be oriented in profile format (the image is rotated by -90° during pre-processing). 
