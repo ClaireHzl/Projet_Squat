@@ -6,14 +6,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-const char* ssid     = "SM-G390W2404";//"Galaxy de Claire"; // Change this to your WiFi SSID
-const char* password = "ifgv9584";//"azpw0641"; // Change this to your WiFi password
+const char* ssid     = "SSID";//"Galaxy de Claire"; // Change this to your WiFi SSID
+const char* password = "password";//"azpw0641"; // Change this to your WiFi password
 const int port = 8000; // Change this to UDP port number
 
 WiFiUDP Udp;
 unsigned int localPort = port;      // port to listen to
 char packetBuffer[255]; //buffer to hold incoming packet
-//char  ReplyBuffer[] = "acknowledged";       // a string to send back
+
 int message = 0;
 bool flag=false;
 
@@ -65,7 +65,7 @@ void setup() {
   drv.setMode(DRV2605_MODE_REALTIME); 
   Serial.println("\nConnected");
 
-  // Threads setup
+  // THREADS SETUP
   pthread_t thread;
   pthread_t thread_vib;
   pthread_create(&thread,NULL,task,NULL);
@@ -75,16 +75,17 @@ void setup() {
 }
 
 void loop() {  
-  
+  //EMPTY (work gets done in threads)  
 }
 
+// TASK1 : listen to Udp and update message and flag
 void* task(void*){
   while (true){
     //READ
     // if there's data available, read a packet
     int packetSize = Udp.parsePacket();
     
-    // print info
+    // print info if needed
     if (packetSize) {
       flag = true;
       
@@ -102,7 +103,6 @@ void* task(void*){
         packetBuffer[len] = 0;
       }
       message = atoi(packetBuffer);
-      // print content
 //      Serial.println("Contents:");
 //      Serial.println(message);
     }
@@ -113,6 +113,7 @@ void* task(void*){
   }
 }
 
+// TASK2 : control motor through driver
 void* task2(void*){
   while (true){
     Serial.println("Contents:");
