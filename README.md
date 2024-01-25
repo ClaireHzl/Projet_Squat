@@ -134,6 +134,7 @@ So there is only a Udp socket sending relevant data to each vibrator's IP adress
 Other than that the code is pretty straightforward : 
 - **V1, control in vibration amplitude :** for the first version the ESP32 board reads packages coming from the Udp socket, generates a PWM signal proportionnal to the value read and outputs it to the GPIO pin that is connected to the motor.
 - **V2, control in vibration frequency :** for the second version, two threads run in parallel in order to have a real time precise control of the vibratory frequence : one thread tasked to read the Udp socket and update the value of the message (global parameter), and the other one tasked with controlling the vibration through the driver.
+NB : the code included in this git is for the adafruit version of the driver.
 
 ## Areas of improving 
 
