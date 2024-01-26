@@ -1,5 +1,6 @@
 #basic packages
 import os, sys
+os.environ['TF_ENABLE_ONEDNN_OPTS']='0'
 import math
 import numpy as np
 import time
@@ -25,7 +26,7 @@ audio_bool, squat, squat_ok, squat_pb1, vib_bool = False, False, False, False, F
 
 ##Electronics initialisation 
 #IP adresses of the vibrators [back, right knee, left knee]
-UDP_IP = ['192.168.112.7', '192.168.250.208', '192.168.250.208'] 
+UDP_IP = ['192.168.250.7', '192.168.250.239', '192.168.250.208'] 
 UDP_PORT = 8000
 #setting the communication between the laptop and the vibrators
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -41,27 +42,29 @@ path = "./Audios"
 audio_files = os.listdir(path) 
 audio_files.sort()
 
-# ## Speech Recognition 
-# # The program is waiting for the user to say "oui" after asking him "es-tu prêt ?"
-# recognizer = Recognizer()
-# with Microphone() as source:
-#     playsound(f"{path}/ready.mp3",  block=False)
+## Speech Recognition 
+# The program is waiting for the user to say "oui" after asking him "es-tu prêt ?"
+recognizer = Recognizer()
+with Microphone() as source:
+    #playsound(f"{path}/ready.mp3",  block=True)
 
-#     while not audio_bool : 
-#         recorded_audio = recognizer.listen(source, phrase_time_limit = 5)
+    while not audio_bool :
+        if count == 0 : playsound(f"{path}/ready.mp3",  block=False)
+        count +=1
+        recorded_audio = recognizer.listen(source, phrase_time_limit = 5)
 
-#         try:
-#             print("Reconnaissance du texte...")
-#             voice_command = recognizer.recognize_google(
-#                         recorded_audio, 
-#                         language="fr-FR"
-#                     ).lower()
-#             print("Vous avez dit : {}".format(voice_command))
-#             if "oui" in voice_command : audio_bool = True
+        try:
+            voice_command = recognizer.recognize_google(recorded_audio, language="fr-FR").lower()
+            print("Vous avez dit : {}".format(voice_command))
+            if "oui" in voice_command : 
+                audio_bool = True
+                count = 0
+            
+        except Exception as ex:
+            print(ex)
+        
 
-#         except Exception as ex:
-#             print(ex)
-
+playsound(f"{path}/go.mp3",  block=True)
 
 #Recording by camera and showing on the laptop
 cap = cv2.VideoCapture(1,cv2.CAP_DSHOW) #1 means the 1st camera linked after the webcam
@@ -221,7 +224,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
                 ##torso
                 # if the angle hip/knee/ankle and the angle shoulder/hip/knee are too different
-                elif abs(angle_knee[ind_other_side])<160 and (abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side]) < 0 or  abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side]) > 30): 
+                elif abs(angle_knee[ind_other_side])<160 and (abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side]) < -5 or  abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side]) > 30): 
                     if abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side]) > 30: 
                         text_pb=f"NOT GOOD, trop penche {abs(angle_knee[ind_other_side]) - abs(angle_hip[ind_other_side])}"
                         tab_pb_int.append(17)
@@ -293,6 +296,7 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
 
         #stopping the recording if CTRL+C or if the person leaves the scene
         if cv2.waitKey(10) & 0xFF == ord('q') or any(val < 0 or val > 1 for sublist in foot for val in sublist) : 
+            playsound(f"{path}/end.mp3",  block=True)
             break
 
     cap.release()
