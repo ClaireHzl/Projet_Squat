@@ -143,3 +143,9 @@ NB : the code included in this git is for the adafruit version of the driver.
 Mediapipe has been much used on pose detection in scientific litterature, but the accuracy is not perfect, depending on the angle of image acquisition and the color conditions (mean REMS of 12.5° in estimation of the knee angle on a squat, in the article from Dill and al [[1]](https://www.researchgate.net/publication/374081734_Accuracy_Evaluation_of_3D_Pose_Estimation_with_MediaPipe_Pose_for_Physical_Exercises)). 
 
 Another study seems to find a better performance with [MoveNet](https://www.tensorflow.org/hub/tutorials/movenet?hl=en) when the pose detection is made on a video capture [[2](https://www.mdpi.com/1999-5903/14/12/380)] and the opensource YOLO program seems to have very good results too, especially the new version [YOLO NAS POSE](https://github.com/Deci-AI/super-gradients/blob/master/YOLONAS-POSE.md), but we couldn't find any litterature to have objective measures, as the version is very recent. 
+
+
+### Machine Learning
+
+On this code, the quantitative thresholds of errors have been set by a physician and a sports professional. It would be interesting to use supervised learning, during a coach-led exercises, with labellisation made by the coach in real-time, allowing to train a classifier. That would be more specific to each user. 
+
