@@ -2,6 +2,14 @@
 
 This code allows to get an auditory and vibrotactile feedback on a squat workout. It has been specifically thought to be used by visually impaired people, but it could be used by anyone. 
 
+## Repository Description
+
+This repository is built as follow : 
+- 1 folder for the algorithm with 1 camera
+- 1 folder for the algorithm with 2 cameras
+- 1 folder for the Arduino codes
+The version that we will develop later one is the one with 1 camera, as it's more accessible for a visual impaired person to set-up autonomously. 
+
 ## Material
 
 ### Physical Material 
@@ -148,4 +156,8 @@ Another study seems to find a better performance with [MoveNet](https://www.tens
 ### Machine Learning
 
 On this code, the quantitative thresholds of errors have been set by a physician and a sports professional. It would be interesting to use supervised learning, during a coach-led exercises, with labellisation made by the coach in real-time, allowing to train a classifier. That would be more specific to each user. 
+
+
+### C++ programming
+To have a better real-time programming, it will be better to change the algorithm from Python to C++. 
 
