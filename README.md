@@ -5,9 +5,10 @@ This code allows to get an auditory and vibrotactile feedback on a squat workout
 ## Repository Description
 
 This repository is built as follow : 
-- 1 folder for the algorithm with 1 camera
-- 1 folder for the algorithm with 2 cameras
-- 1 folder for the Arduino codes
+- 1 [folder](https://github.com/ClaireHzl/Projet_Squat/tree/main/2cam_version) for the algorithm with 1 camera
+- 1 [folder](https://github.com/ClaireHzl/Projet_Squat/tree/main/1cam_version) for the algorithm with 2 cameras
+- 1 [folder](https://github.com/ClaireHzl/Projet_Squat/tree/main/Arduino) for the Arduino codes
+
 The version that we will develop later one is the one with 1 camera, as it's more accessible for a visual impaired person to set-up autonomously. 
 
 ## Material
@@ -103,6 +104,8 @@ Each error type is characterized by an integer from 1 to 23. They are structured
 
 Therefore, according to the coordinates, angles and distances of the landmarks, if an error is detected, the corresponding integer will be output. If not, it's a good squat, the corresponding integer is 0. 
 
+The errors have been selected by studying this [article](https://journals.lww.com/nsca-scj/fulltext/2014/12000/the_back_squat__a_proposed_assessment_of.2.aspx). It lists only the qualitative errors, we couldn't find quantitative data so we use our expertise as sport professional and physician to determine the different thresholds. 
+
 
 ### On each squat
 
@@ -161,3 +164,6 @@ On this code, the quantitative thresholds of errors have been set by a physician
 ### C++ programming
 To have a better real-time programming, it will be better to change the algorithm from Python to C++. 
 
+
+
+*Project realized by Vimala Heriau, Eloïse Szmatula and Claire Houziel*
